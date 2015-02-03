@@ -136,7 +136,7 @@ int32_t g_nforce_32;
 	#define GP_CLK_N_DEFAULT                        92
 	#define GP_CLK_D_DEFAULT			46  /* 50% duty cycle */
 	#define IMM_PWM_MULTIPLIER			92
-#elif defined(CONFIG_SEC_K_PROJECT) || defined(CONFIG_SEC_KACTIVE_PROJECT)
+#elif defined(CONFIG_SEC_K_PROJECT) || defined(CONFIG_SEC_KACTIVE_PROJECT) || defined(CONFIG_SEC_KSPORTS_PROJECT)
 #if defined(CONFIG_MACH_KLTE_MAX77828_JPN)
 	#define GP_CLK_M_DEFAULT			1
 	#define GP_CLK_N_DEFAULT                        20

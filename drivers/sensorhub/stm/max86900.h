@@ -81,11 +81,11 @@ struct max86900_device_data
 	struct mutex i2clock;
 	struct mutex activelock;
 	struct regulator *vdd_1p8;
-#if defined(CONFIG_MACH_KACTIVELTE_DCM)
+#if defined(CONFIG_SEC_KACTIVE_PROJECT) || defined(CONFIG_MACH_KSPORTSLTE_SPR) || defined(CONFIG_MACH_KACTIVELTE_DCM)
 	struct regulator *vdd_3p3;
 #endif
 	const char *sub_ldo4;
-#if defined(CONFIG_MACH_KACTIVELTE_DCM)
+#if defined(CONFIG_SEC_KACTIVE_PROJECT) || defined(CONFIG_MACH_KSPORTSLTE_SPR) || defined(CONFIG_MACH_KACTIVELTE_DCM)
 	const char *led_l19;
 #endif
 	bool *bio_status;

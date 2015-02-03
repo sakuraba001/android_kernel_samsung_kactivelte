@@ -95,6 +95,8 @@ void mdss_dsi_ctrl_init(struct mdss_dsi_ctrl_pdata *ctrl)
 		ctrl->ndx = DSI_CTRL_1;
 	}
 
+	ctrl->panel_mode = ctrl->panel_data.panel_info.mipi.mode;
+
 	ctrl_list[ctrl->ndx] = ctrl;	/* keep it */
 
 	if (mdss_register_irq(ctrl->dsi_hw))
@@ -270,8 +272,6 @@ void mdss_dsi_host_init(struct mipi_panel_info *pinfo,
 	dsi_ctrl_base = ctrl_pdata->ctrl_base;
 
 	pinfo->rgb_swap = DSI_RGB_SWAP_RGB;
-
-	ctrl_pdata->panel_mode = pinfo->mode;
 
 	if (pinfo->mode == DSI_VIDEO_MODE) {
 		data = 0;
@@ -850,7 +850,8 @@ int mdss_dsi_cmds_rx(struct mdss_dsi_ctrl_pdata *ctrl,
 			struct dsi_cmd_desc *cmds, int rlen)
 {
 	int data_byte, rx_byte, dlen, end;
-	int short_response, diff, pkt_size, ret = 0;
+	int short_response, pkt_size, ret = 0;
+	int diff = 0;
 	int i;
 	struct dsi_buf *tp, *rp;
 	char cmd;
@@ -1596,11 +1597,11 @@ static int dsi_event_thread(void *data)
 		}
 
 		if (todo & DSI_EV_MDP_BUSY_RELEASE) {
-			spin_lock(&ctrl->mdp_lock);
+			spin_lock_irqsave(&ctrl->mdp_lock, flag);
 			ctrl->mdp_busy = false;
 			mdss_dsi_disable_irq_nosync(ctrl, DSI_MDP_TERM);
 			complete(&ctrl->mdp_comp);
-			spin_unlock(&ctrl->mdp_lock);
+			spin_unlock_irqrestore(&ctrl->mdp_lock, flag);
 
 			/* enable dsi error interrupt */
 			mdss_dsi_err_intr_ctrl(ctrl, DSI_INTR_ERROR_MASK, 1);
