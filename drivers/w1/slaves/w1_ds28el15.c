@@ -93,6 +93,9 @@
 #define CO_DEFAULT	1
 #define RETRY_LIMIT	10
 
+#ifdef CONFIG_W1_CF
+#define RETRY_LIMIT_CF	5
+#endif
 // misc state
 static unsigned short slave_crc16;
 
@@ -649,7 +652,7 @@ int w1_ds28el15_read_memory_check(struct w1_slave *sl, int seg, int page, uchar 
 		docrc16(buf[i]);
 
 	if (slave_crc16 != 0xB001)
-		return -1;
+		return -2;
 
 	if (READ_EOP_BYTE(seg) == length) {
 		// check the second CRC16
@@ -660,7 +663,7 @@ int w1_ds28el15_read_memory_check(struct w1_slave *sl, int seg, int page, uchar 
 			docrc16(buf[i]);
 
 		if (slave_crc16 != 0xB001)
-			return -1;
+			return -2;
 	}
 
 	// copy the data to the read buffer
@@ -2036,6 +2039,7 @@ static int w1_ds28el15_add_slave(struct w1_slave *sl)
 {
 	int err = 0;
 #ifdef CONFIG_W1_CF
+	int count = 0, rst = 0;
 	u8 rdbuf[32];
 #endif
 
@@ -2113,10 +2117,17 @@ static int w1_ds28el15_add_slave(struct w1_slave *sl)
 #endif
 	{
 #ifdef CONFIG_W1_CF
-		if (w1_ds28el15_read_memory_check(sl, 0, 0, rdbuf, 32))
+		while (count < RETRY_LIMIT_CF) {
+			rst = w1_ds28el15_read_memory_check(sl, 0, 0, rdbuf, 32);
+			if (rst == 0)
+				break;
+			count++;
+		}
+		if (rst == -2)
 			cf_node = 1;
 		else
 			cf_node = 0;
+
 		pr_info("%s:COVER CLASS(%d)\n", __func__, cf_node);
 #endif
 

@@ -57,7 +57,7 @@ int w1_max_slave_ttl = 2;
 static struct w1_master *master_dev = NULL;
 
 extern int w1_ds28el15_verifymac(struct w1_slave *sl);
-extern int id, color;
+extern int id, color, verification;
 #ifdef CONFIG_W1_SN
 extern char g_sn[14];
 #endif
@@ -456,13 +456,14 @@ static int w1_atoreg_num(struct device *dev, const char *buf, size_t count,
 static struct w1_slave *w1_slave_search_device(struct w1_master *dev,
 	struct w1_reg_num *rn)
 {
-	struct w1_slave *sl;
+	struct w1_slave *sl = NULL;
 	list_for_each_entry(sl, &dev->slist, w1_slave_entry) {
+#if !defined(CONFIG_W1_FAST_CHECK)
 		if (sl->reg_num.family == rn->family &&
 				sl->reg_num.id == rn->id &&
-				sl->reg_num.crc == rn->crc) {
+				sl->reg_num.crc == rn->crc)
+#endif
 			return sl;
-		}
 	}
 	return NULL;
 }
@@ -533,38 +534,14 @@ static ssize_t w1_master_attribute_store_remove(struct device *dev,
 
 static ssize_t w1_master_attribute_show_verify_mac(struct device *dev, struct device_attribute *attr, char *buf)
 {
-	struct w1_master *md = dev_to_w1_master(dev);
 	int result = -1;
-	struct list_head *ent, *n;
-	struct w1_slave *sl = NULL;
+#ifdef CONFIG_W1_WORKQUEUE
+	cancel_delayed_work_sync(&w1_gdev->w1_dwork);
+	schedule_delayed_work(&w1_gdev->w1_dwork, 0);
 
-#ifndef CONFIG_SEC_H_PROJECT
-	mutex_lock(&md->mutex);
+	msleep(10);
 #endif
-	list_for_each_safe(ent, n, &md->slist) {
-		sl = list_entry(ent, struct w1_slave, w1_slave_entry);
-	}
-#ifdef CONFIG_SEC_H_PROJECT
-	pr_info("%s:verified(%d)", __func__, verified);
-	if(verified == 0) {
-		result = 0;
-	} else {
-		/* verify mac */
-		if(sl) {
-			result = w1_ds28el15_verifymac(sl);
-		} else
-			pr_info("%s : sysfs call fail\n", __func__);
-	}
-#else
-	/* verify mac */
-	if(sl)
-		result = w1_ds28el15_verifymac(sl);
-	else
-		pr_info("%s : sysfs call fail\n", __func__);
-#endif
-#ifndef CONFIG_SEC_H_PROJECT
-	mutex_unlock(&md->mutex);
-#endif
+	result = verification;
 
 	return sprintf(buf, "%d\n", result);
 }
@@ -1148,6 +1125,22 @@ int w1_process(void *data)
 
 	return 0;
 }
+
+#ifdef CONFIG_W1_WORKQUEUE
+void w1_work(struct work_struct *work)
+{
+	struct w1_master *dev =
+		container_of(work, struct w1_master, w1_dwork.work);
+
+	if (dev->search_count) {
+		mutex_lock(&dev->mutex);
+		w1_search_process(dev, W1_SEARCH);
+		mutex_unlock(&dev->mutex);
+	}
+
+	schedule_delayed_work(&dev->w1_dwork, HZ * 2);
+}
+#endif
 
 static int __init w1_init(void)
 {

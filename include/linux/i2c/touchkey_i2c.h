@@ -310,6 +310,7 @@ struct cypress_touchkey_info {
 
 	u8	touchkeyid;
 	bool	support_fw_update;
+	atomic_t	keypad_enable;
 	bool	do_checksum;
 	struct wake_lock fw_wakelock;
 };
@@ -319,7 +320,7 @@ void touchkey_charger_infom(bool en);
 #endif
 
 /* TKEY MODULE 0x6 */
-#if defined(CONFIG_MACH_KLTE_EUR)
+#if defined(CONFIG_MACH_KLTE_EUR) || defined(CONFIG_MACH_KWIFI_LDU)
 #define TKEY_MODULE_CHECK_REV		0xA
 #elif defined(CONFIG_MACH_KLTE_ATT) || defined(CONFIG_MACH_KLTE_AUS_TEL)
 #define TKEY_MODULE_CHECK_REV		0xE

@@ -39,8 +39,8 @@ static int msm_hdmi_edid_ctl_info(struct snd_kcontrol *kcontrol,
 	codec_data = snd_soc_codec_get_drvdata(codec);
 	rc = codec_data->hdmi_ops.get_audio_edid_blk(codec_data->hdmi_core_pdev,
 						     &edid_blk);
+	uinfo->type = SNDRV_CTL_ELEM_TYPE_BYTES;
 	if (!IS_ERR_VALUE(rc)) {
-		uinfo->type = SNDRV_CTL_ELEM_TYPE_BYTES;
 		uinfo->count = edid_blk.audio_data_blk_size +
 			       edid_blk.spk_alloc_data_blk_size;
 	}
@@ -114,31 +114,31 @@ static int msm_hdmi_audio_codec_rx_dai_hw_params(
 	struct msm_hdmi_audio_codec_rx_data *codec_data =
 			dev_get_drvdata(dai->codec->dev);
 
+	/*refer to HDMI spec CEA-861-E: Table 28 Audio InfoFrame Data Byte 4*/
 	if (IS_ERR_VALUE(msm_hdmi_audio_codec_return_value)) {
 		dev_err(dai->dev,
 			"%s() HDMI core is not ready\n", __func__);
 		return msm_hdmi_audio_codec_return_value;
 	}
 
-	/*refer to HDMI spec CEA-861-E: Table 28 Audio InfoFrame Data Byte 4*/
 	switch (num_channels) {
 	case 2:
 		channel_allocation  = 0;
 		break;
 	case 3:
-		channel_allocation  = 0x02;/*default to FL/FR/FC*/
+		channel_allocation  = 0x02;//default to FL/FR/FC
 		break;
 	case 4:
-		channel_allocation  = 0x06;/*default to FL/FR/FC/RC*/
+		channel_allocation  = 0x06;//default to FL/FR/FC/RC
 		break;
 	case 5:
-		channel_allocation  = 0x0A;/*default to FL/FR/FC/RR/RL*/
+		channel_allocation  = 0x0A;//default to FL/FR/FC/RR/RL
 		break;
 	case 6:
 		channel_allocation  = 0x0B;
 		break;
 	case 7:
-		channel_allocation  = 0x12;/*default to FL/FR/FC/RL/RR/RRC/RLC*/
+		channel_allocation  = 0x12;//default to FL/FR/FC/RL/RR/RRC/RLC
 		break;
 	case 8:
 		channel_allocation  = 0x13;
@@ -269,7 +269,7 @@ static struct snd_soc_codec_driver msm_hdmi_audio_codec_rx_soc_driver = {
 	.num_controls = ARRAY_SIZE(msm_hdmi_codec_rx_controls),
 };
 
-static int msm_hdmi_audio_codec_rx_plat_probe(
+static int __devinit msm_hdmi_audio_codec_rx_plat_probe(
 		struct platform_device *pdev)
 {
 	dev_dbg(&pdev->dev, "%s(): orginal dev name  = %s, id = %d\n",
@@ -293,7 +293,7 @@ static int msm_hdmi_audio_codec_rx_plat_probe(
 		ARRAY_SIZE(msm_hdmi_audio_codec_rx_dais));
 }
 
-static int msm_hdmi_audio_codec_rx_plat_remove(
+static int __devexit msm_hdmi_audio_codec_rx_plat_remove(
 		struct platform_device *pdev)
 {
 	snd_soc_unregister_codec(&pdev->dev);
@@ -312,7 +312,7 @@ static struct platform_driver msm_hdmi_audio_codec_rx_driver = {
 		.of_match_table = msm_hdmi_audio_codec_rx_dt_match,
 	},
 	.probe = msm_hdmi_audio_codec_rx_plat_probe,
-	.remove = msm_hdmi_audio_codec_rx_plat_remove,
+	.remove = __devexit_p(msm_hdmi_audio_codec_rx_plat_remove),
 };
 
 static int __init msm_hdmi_audio_codec_rx_init(void)

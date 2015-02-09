@@ -32,7 +32,7 @@
 #define LDI_GRAY	'1'
 #define LDI_WHITE	'2'
 
-#if defined(CONFIG_MACH_KACTIVELTE_DCM)
+#if defined(CONFIG_SEC_KACTIVE_PROJECT) || defined(CONFIG_MACH_KACTIVELTE_DCM)
 #define CAL_SKIP_ADC	52
 #define CAL_FAIL_ADC	80
 #else

@@ -2220,7 +2220,6 @@ static struct local_vote_clk gcc_ce1_clk = {
 	.en_mask = BIT(5),
 	.base = &virt_bases[GCC_BASE],
 	.c = {
-		.parent = &ce1_clk_src.c,
 		.dbg_name = "gcc_ce1_clk",
 		.ops = &clk_ops_vote,
 		CLK_INIT(gcc_ce1_clk.c),
@@ -2257,7 +2256,6 @@ static struct local_vote_clk gcc_ce2_clk = {
 	.en_mask = BIT(2),
 	.base = &virt_bases[GCC_BASE],
 	.c = {
-		.parent = &ce2_clk_src.c,
 		.dbg_name = "gcc_ce2_clk",
 		.ops = &clk_ops_vote,
 		CLK_INIT(gcc_ce2_clk.c),
@@ -4968,10 +4966,7 @@ static struct clk_lookup msm_clocks_8974pro_only[] __initdata = {
 	CLK_LOOKUP("cam_clk", camss_mclk2_clk.c, "2.qcom,camera"),
 	CLK_LOOKUP("iface_clk", gcc_blsp1_ahb_clk.c, "f9925000.i2c"), /* BLSP#3 */
 	CLK_LOOKUP("core_clk", gcc_blsp1_qup3_i2c_apps_clk.c, "f9925000.i2c"), /* BLSP#3 */
-#if defined(CONFIG_SEC_NFC_SENN3AB)
-	CLK_LOOKUP("iface_clk", gcc_blsp1_ahb_clk.c, "f9921000.serial"),
-	CLK_LOOKUP("core_clk", gcc_blsp1_uart5_apps_clk.c, "f9921000.serial"),
-#endif
+
 	/*  Health cover UART clocks */
 	CLK_LOOKUP("iface_clk", gcc_blsp2_ahb_clk.c, "f995d000.serial"),
 	CLK_LOOKUP("core_clk", gcc_blsp2_uart1_apps_clk.c, "f995d000.serial"),
@@ -4989,7 +4984,7 @@ static struct clk_lookup msm_clocks_8974pro_only[] __initdata = {
 	CLK_LOOKUP("iface_clk", gcc_blsp2_ahb_clk.c, "f9966000.spi"),
 	CLK_LOOKUP("core_clk", gcc_blsp2_qup4_i2c_apps_clk.c, ""),
 	CLK_LOOKUP("core_clk", gcc_blsp2_qup4_spi_apps_clk.c, "f9966000.spi"),
-#if defined(CONFIG_NFC_PN547) || defined(CONFIG_BCM2079X_NFC_I2C)
+#if defined(CONFIG_SEC_NFC_I2C) || defined(CONFIG_NFC_PN547) || defined(CONFIG_BCM2079X_NFC_I2C)
 	CLK_LOOKUP("core_clk", gcc_blsp1_qup1_spi_apps_clk.c, ""),
 #endif
 	CLK_LOOKUP("core_clk", gcc_blsp1_qup5_i2c_apps_clk.c, ""),
@@ -5025,13 +5020,15 @@ static struct clk_lookup msm_clocks_8974pro_only[] __initdata = {
 #ifdef CONFIG_SND_SOC_ES705
 	CLK_LOOKUP("osr_clk", div_clk1.c, "es705_mclk_dev"),
 #endif
-#ifdef CONFIG_NFC_PN547_PMC8974_CLK_REQ
+#if defined(CONFIG_NFC_PN547_PMC8974_CLK_REQ) 
 	CLK_LOOKUP("nfc_clk", cxo_d1_pin.c, "1-0029"),
+#elif defined(CONFIG_NFC_N5_PMC8974_CLK_REQ)
+	CLK_LOOKUP("nfc_clk", cxo_d1_pin.c, NULL),
 #endif
 
 #if defined(CONFIG_MACH_K3GDUOS_CTC)
 	CLK_LOOKUP("fpga_src_clk", camss_mclk3_clk.c, NULL),
-#endif	
+#endif
 };
 
 static struct clk_lookup msm_clocks_8974_only[] __initdata = {
@@ -5105,7 +5102,7 @@ static struct clk_lookup msm_clocks_8974_only[] __initdata = {
 	CLK_LOOKUP("cam_gp1_src_clk", mmss_gp1_clk_src.c, NULL),
 	CLK_LOOKUP("cam_gp0_clk", camss_gp0_clk.c, NULL),
 	CLK_LOOKUP("cam_gp1_clk", camss_gp1_clk.c, NULL),
-#ifdef CONFIG_NFC_PN547_PMC8974_CLK_REQ
+#if defined(CONFIG_NFC_PN547_PMC8974_CLK_REQ) || defined(CONFIG_NFC_N5_PMC8974_CLK_REQ)
 #ifdef CONFIG_NFC_I2C_OVERWRITE
 	CLK_LOOKUP("nfc_clk", cxo_d1_pin.c, NULL),
 #else
@@ -5176,10 +5173,6 @@ static struct clk_lookup msm_clocks_8974_common[] __initdata = {
 	CLK_LOOKUP("iface_clk", gcc_blsp2_ahb_clk.c, "f9962000.serial"),        // REV 04 change.
 	CLK_LOOKUP("core_clk", gcc_blsp2_uart6_apps_clk.c, "f9962000.serial"),    // REV 04 change.
 #else
-#ifdef CONFIG_SEC_NFC_SENN3AB
-	CLK_LOOKUP("iface_clk", gcc_blsp2_ahb_clk.c, "f995f000.serial"),
-	CLK_LOOKUP("core_clk", gcc_blsp2_uart3_apps_clk.c, "f995f000.serial"),
-#endif
 	CLK_LOOKUP("core_clk", gcc_blsp2_uart3_apps_clk.c, ""),
 	CLK_LOOKUP("core_clk", gcc_blsp2_uart6_apps_clk.c, ""),
 #endif
