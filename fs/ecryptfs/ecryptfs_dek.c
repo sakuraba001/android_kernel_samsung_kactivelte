@@ -1,4 +1,5 @@
 #include <linux/crypto.h>
+#include <linux/crypto.h>
 #include <asm/unaligned.h>
 #include "ecryptfs_dek.h"
 
