@@ -296,6 +296,7 @@ obj-$(CONFIG_SEC_LT03_PROJECT) += board-8974-sec-lt03-gpiomux.o
 obj-$(CONFIG_SEC_PICASSO_PROJECT) += board-8974-sec-picasso-gpiomux.o
 obj-$(CONFIG_SEC_V2_PROJECT) += board-8974-sec-v2-gpiomux.o
 obj-$(CONFIG_SEC_KACTIVE_PROJECT) += board-8974-sec-kactive-gpiomux.o
+obj-$(CONFIG_MACH_KACTIVELTE_DCM) += board-8974-sec-kactive-gpiomux.o
 obj-$(CONFIG_SEC_KSPORTS_PROJECT) += board-8974-sec-ksports-gpiomux.o
 obj-$(CONFIG_ARCH_MSM8974) += gdsc.o
 obj-$(CONFIG_ARCH_MSM9625) += gdsc.o
