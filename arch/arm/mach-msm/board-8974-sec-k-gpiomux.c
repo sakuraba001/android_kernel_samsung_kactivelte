@@ -207,6 +207,7 @@ static struct msm_gpiomux_config gpio_rev08_nc_configs[] __initdata = {
 	GPIOMUX_SET_NC(116),
 	GPIOMUX_SET_NC(127),
 	GPIOMUX_SET_NC(135), // REV 06
+#endif
 #if defined(CONFIG_MACH_KACTIVELTE_DCM)
 	GPIOMUX_SET_NC(9),
 	GPIOMUX_SET_NC(18),
