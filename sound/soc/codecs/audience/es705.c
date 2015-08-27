@@ -89,6 +89,10 @@ struct es705_api_access {
 #define NETWORK_OFFSET	21
 static int network_type = NARROW_BAND;
 
+#if defined(FORCED_REROUTE_PRESET)
+static int extra_vol_onoff = 0;
+#endif
+
 /* Route state for Internal state management */
 enum es705_power_state {
 ES705_POWER_FW_LOAD,
@@ -140,6 +144,7 @@ struct es705_priv es705_priv = {
 	.use_uart_for_wakeup_gpio = 0,
 	/* for tuning : 1 */
 	.change_uart_config = 0,
+	.internal_route_num = 5,
 #endif
 };
 
@@ -973,15 +978,18 @@ static ssize_t es705_fw_version_show(struct device *dev,
 
 	memset(verbuf, 0, SIZE_OF_VERBUF);
 
-	value = es705_read(NULL, ES705_FW_FIRST_CHAR);
-	*verbuf++ = (value & 0x00ff);
-	for (idx = 0; idx < (SIZE_OF_VERBUF-2); idx++) {
-		value = es705_read(NULL, ES705_FW_NEXT_CHAR);
+	if (es705_priv.pm_state == ES705_POWER_AWAKE) {
+		value = es705_read(NULL, ES705_FW_FIRST_CHAR);
 		*verbuf++ = (value & 0x00ff);
-	}
-	/* Null terminate the string*/
-	*verbuf = '\0';
-	dev_info(dev, "Audience fw ver %s\n", versionbuffer);
+		for (idx = 0; idx < (SIZE_OF_VERBUF-2); idx++) {
+			value = es705_read(NULL, ES705_FW_NEXT_CHAR);
+			*verbuf++ = (value & 0x00ff);
+		}
+		/* Null terminate the string*/
+		*verbuf = '\0';
+		dev_info(dev, "Audience fw ver %s\n", versionbuffer);
+	} else
+		dev_info(dev, "Audience is not awake\n");
 	return snprintf(buf, PAGE_SIZE, "FW Version = %s\n", versionbuffer);
 }
 
@@ -1567,16 +1575,19 @@ es705_fw_download_exit:
 int es705_bootup(struct es705_priv *es705)
 {
 	int rc;
+	int fw_max_retry_cnt = 10;
 	BUG_ON(es705->standard->size == 0);
 
 	mutex_lock(&es705->pm_mutex);
 	es705->pm_state = ES705_POWER_FW_LOAD;
 	mutex_unlock(&es705->pm_mutex);
 
+do{
 	rc = es705_fw_download(es705, STANDARD);
 	if (rc) {
 		dev_err(es705->dev, "%s(): STANDARD fw download error\n",
 			__func__);
+		es705_gpio_reset(es705);
 	} else {
 		mutex_lock(&es705->pm_mutex);
 		es705->pm_state = ES705_POWER_AWAKE;
@@ -1585,6 +1596,7 @@ int es705_bootup(struct es705_priv *es705)
 #endif
 		mutex_unlock(&es705->pm_mutex);
 	}
+}while( rc && fw_max_retry_cnt--);
 	return rc;
 }
 
@@ -1708,6 +1720,11 @@ static int es705_sleep(struct es705_priv *es705)
 #endif /* SAMSUNG_ES70X_BACK_TO_BACK_CMD_DELAY */
 
 	dev_info(es705->dev, "%s\n",__func__);
+
+#if defined(FORCED_REROUTE_PRESET)
+	if (delayed_work_pending(&es705->forced_reroute_work))
+		cancel_delayed_work_sync(&es705->forced_reroute_work);
+#endif
 
 	mutex_lock(&es705->pm_mutex);
 
@@ -1863,6 +1880,12 @@ static int es705_wakeup(struct es705_priv *es705)
 #if defined(SAMSUNG_ES705_FEATURE)
 	msm_slim_es705_func(es705_priv.gen0_client);
 #endif
+
+#if defined(FORCED_REROUTE_PRESET)
+	if (delayed_work_pending(&es705->forced_reroute_work))
+			cancel_delayed_work_sync(&es705->forced_reroute_work);
+#endif
+
 	if (delayed_work_pending(&es705->sleep_work) ||
 		(es705->pm_state == ES705_POWER_SLEEP_PENDING)) {
 		cancel_delayed_work_sync(&es705->sleep_work);
@@ -2004,16 +2027,14 @@ static int es705_get_control_value(struct snd_kcontrol *kcontrol,
 	struct soc_mixer_control *mc =
 		(struct soc_mixer_control *)kcontrol->private_value;
 	unsigned int reg = mc->reg;
-	unsigned int value;
+	unsigned int value =0;
 
-#if defined(SAMSUNG_ES705_FEATURE)
-	es705_read_write_power_control(1);
-#endif
+	if (es705_priv.rx1_route_enable ||
+		es705_priv.tx1_route_enable ||
+		es705_priv.rx2_route_enable) {
 	value = es705_read(NULL, reg);
+	}
 	ucontrol->value.integer.value[0] = value;
-#if defined(SAMSUNG_ES705_FEATURE)
-	es705_read_write_power_control(0);
-#endif
 
 	return 0;
 }
@@ -2039,17 +2060,15 @@ static int es705_get_control_enum(struct snd_kcontrol *kcontrol,
 	struct soc_enum *e =
 		(struct soc_enum *)kcontrol->private_value;
 	unsigned int reg = e->reg;
-	unsigned int value;
+	unsigned int value=0;
 
-#if defined(SAMSUNG_ES705_FEATURE)
-	es705_read_write_power_control(1);
-#endif
+	if (es705_priv.rx1_route_enable ||
+		es705_priv.tx1_route_enable ||
+		es705_priv.rx2_route_enable) {
 	value = es705_read(NULL, reg);
+}
 
 	ucontrol->value.enumerated.item[0] = value;
-#if defined(SAMSUNG_ES705_FEATURE)
-	es705_read_write_power_control(0);
-#endif
 
 	return 0;
 }
@@ -2378,6 +2397,9 @@ static int es705_power_control(unsigned int value, unsigned int reg)
 			__func__, es705_priv.pm_state);
 		break;
 	}
+	dev_info(es705_priv.dev, "%s(): exit pm state %d es705 state %d value %d\n",
+		__func__, es705_priv.pm_state,
+		es705_priv.es705_power_state, value);
 
 	return rc;
 }
@@ -3461,6 +3483,46 @@ static int es705_get_network_type(struct snd_kcontrol *kcontrol,
 	return 0;
 }
 
+#if defined(FORCED_REROUTE_PRESET)
+static void es705_forced_reroute(struct work_struct *w)
+{
+	struct es705_priv *es705 = &es705_priv;
+	int rc = 0;
+	int vol = 0;
+	dev_info(es705->dev, "%s(): to %ld %d\n", __func__, es705->internal_route_num, extra_vol_onoff);
+
+	rc = es705_write_block(es705, 
+					&es705_route_configs[es705->internal_route_num][0]);
+
+	if (extra_vol_onoff) {
+		rc = es705_write(NULL, ES705_PRESET, 	ES705_VEQ_OFF_PRESET);
+		
+	} else {
+		vol = es705->current_veq;
+		es705->current_veq = -1;	
+		es705->current_veq_preset = 1;
+
+		es705_put_veq_block(vol);		
+	}
+	extra_vol_onoff = 0;
+}
+
+static int es705_forced_reroute_w(struct snd_kcontrol *kcontrol,
+				       struct snd_ctl_elem_value *ucontrol)
+{
+	struct es705_priv *es705 = &es705_priv;
+
+	if (delayed_work_pending(&es705->forced_reroute_work))
+			cancel_delayed_work_sync(&es705->forced_reroute_work);
+
+	dev_info(es705->dev, "%s(): put work task workqueue after delay(200ms)\n ", __func__);
+	schedule_delayed_work(&es705->forced_reroute_work, msecs_to_jiffies(500));
+	extra_vol_onoff = ucontrol->value.integer.value[0];
+
+	return 0;
+}
+#endif
+
 static int es705_put_internal_route(struct snd_kcontrol *kcontrol,
 				    struct snd_ctl_elem_value *ucontrol)
 {
@@ -3648,16 +3710,14 @@ static int es705_get_dereverb_gain_value(struct snd_kcontrol *kcontrol,
 	struct soc_mixer_control *mc =
 		(struct soc_mixer_control *)kcontrol->private_value;
 	unsigned int reg = mc->reg;
-	unsigned int value;
+	unsigned int value=0;
 
-#if defined(SAMSUNG_ES705_FEATURE)
-	es705_read_write_power_control(1);
-#endif
+	if (es705_priv.rx1_route_enable ||
+		es705_priv.tx1_route_enable ||
+		es705_priv.rx2_route_enable) {
 	value = es705_read(NULL, reg);
+}
 	ucontrol->value.integer.value[0] = es705_gain_to_index(-12, 1, value);
-#if defined(SAMSUNG_ES705_FEATURE)
-	es705_read_write_power_control(0);
-#endif
 	return 0;
 }
 
@@ -3685,16 +3745,14 @@ static int es705_get_bwe_high_band_gain_value(struct snd_kcontrol *kcontrol,
 	struct soc_mixer_control *mc =
 		(struct soc_mixer_control *)kcontrol->private_value;
 	unsigned int reg = mc->reg;
-	unsigned int value;
+	unsigned int value=0;
 
-#if defined(SAMSUNG_ES705_FEATURE)
-	es705_read_write_power_control(1);
-#endif
+	if (es705_priv.rx1_route_enable ||
+		es705_priv.tx1_route_enable ||
+		es705_priv.rx2_route_enable) {
 	value = es705_read(NULL, reg);
+}
 	ucontrol->value.integer.value[0] = es705_gain_to_index(-10, 1, value);
-#if defined(SAMSUNG_ES705_FEATURE)
-	es705_read_write_power_control(0);
-#endif
 
 	return 0;
 }
@@ -3723,17 +3781,14 @@ static int es705_get_bwe_max_snr_value(struct snd_kcontrol *kcontrol,
 	struct soc_mixer_control *mc =
 		(struct soc_mixer_control *)kcontrol->private_value;
 	unsigned int reg = mc->reg;
-	unsigned int value;
+	unsigned int value=0;
 
-#if defined(SAMSUNG_ES705_FEATURE)
-	es705_read_write_power_control(1);
-#endif
+	if (es705_priv.rx1_route_enable ||
+		es705_priv.tx1_route_enable ||
+		es705_priv.rx2_route_enable) {
 	value = es705_read(NULL, reg);
+}
 	ucontrol->value.integer.value[0] = es705_gain_to_index(-20, 1, value);
-#if defined(SAMSUNG_ES705_FEATURE)
-	es705_read_write_power_control(0);
-#endif
-
 	return 0;
 }
 
@@ -3957,19 +4012,17 @@ int es705_get_vs_detection_sensitivity(struct snd_kcontrol *kcontrol,
 	struct soc_mixer_control *mc =
 		(struct soc_mixer_control *)kcontrol->private_value;
 	unsigned int reg = mc->reg;
-	unsigned int value;
+	unsigned int value=0;
 
-#if defined(SAMSUNG_ES705_FEATURE)
-	es705_read_write_power_control(1);
-#endif
+	if (es705_priv.rx1_route_enable ||
+		es705_priv.tx1_route_enable ||
+		es705_priv.rx2_route_enable) {
 	value = es705_read(NULL, reg);
+}
 	ucontrol->value.integer.value[0] = value;
 
 	dev_dbg(es705_priv.dev, "%s(): value = %d ucontrol = %ld\n",
 		__func__, value, ucontrol->value.integer.value[0]);
-#if defined(SAMSUNG_ES705_FEATURE)
-	es705_read_write_power_control(0);
-#endif
 
 	return 0;
 }
@@ -4001,19 +4054,17 @@ int es705_get_vad_sensitivity(struct snd_kcontrol *kcontrol,
 	struct soc_mixer_control *mc =
 		(struct soc_mixer_control *)kcontrol->private_value;
 	unsigned int reg = mc->reg;
-	unsigned int value;
+	unsigned int value=0;
 
-#if defined(SAMSUNG_ES705_FEATURE)
-	es705_read_write_power_control(1);
-#endif
+	if (es705_priv.rx1_route_enable ||
+		es705_priv.tx1_route_enable ||
+		es705_priv.rx2_route_enable) {
 	value = es705_read(NULL, reg);
+}
 	ucontrol->value.integer.value[0] = value;
 
 	dev_dbg(es705_priv.dev, "%s(): value = %d ucontrol = %ld\n",
 		__func__, value, ucontrol->value.integer.value[0]);
-#if defined(SAMSUNG_ES705_FEATURE)
-	es705_read_write_power_control(0);
-#endif
 
 	return 0;
 }
@@ -4208,6 +4259,10 @@ static struct snd_kcontrol_new es705_digital_ext_snd_controls[] = {
 	SOC_SINGLE_EXT("Voice Sense Stream Enable", ES705_VS_STREAM_ENABLE,
 		       0, 1, 0,
 		       es705_get_vs_stream_enable, es705_put_vs_stream_enable),
+#if defined(FORCED_REROUTE_PRESET)
+	SOC_SINGLE_EXT("ES705 Reroute", SND_SOC_NOPM, 0, 1, 0,
+		   NULL, es705_forced_reroute_w),
+#endif
 #if defined(SAMSUNG_ES705_FEATURE)
 	SOC_SINGLE_EXT("ES705 Voice Wakeup Enable", SND_SOC_NOPM, 0, 2, 0,
 		       es705_get_voice_wakeup_enable_value,
@@ -4638,13 +4693,10 @@ int es705_core_probe(struct device *dev)
 #ifdef ES705_VDDCORE_MAX77826
 	struct regulator *es705_vdd_core = NULL;
 #endif
-
-#if defined(CONFIG_MACH_KLTE_KOR)
-	const char *fw_filename = "audience-es705-fw-kltekor.bin";
-#else
 	const char *fw_filename = "audience-es705-fw.bin";
-#endif
+#ifndef CONFIG_ARCH_MSM8226
 	const char *vs_filename = "audience-es705-vs.bin";
+#endif /* CONFIG_ARCH_MSM8226 */
 
 	if (pdata == NULL) {
 		dev_err(dev, "%s(): pdata is NULL", __func__);
@@ -4726,6 +4778,10 @@ int es705_core_probe(struct device *dev)
 #if defined(PREVENT_CALL_MUTE_WHEN_SWITCH_NB_AND_WB)
 	INIT_DELAYED_WORK(&es705_priv.reroute_work, es705_reroute);	
 #endif
+#if defined(FORCED_REROUTE_PRESET)
+	INIT_DELAYED_WORK(&es705_priv.forced_reroute_work, es705_forced_reroute);	
+#endif
+
 #if defined(SAMSUNG_ES705_FEATURE)
 	rc = es705_init_input_device(&es705_priv);
 	if (rc < 0)
@@ -4743,6 +4799,7 @@ int es705_core_probe(struct device *dev)
 		goto request_firmware_error;
 	}
 
+#ifndef CONFIG_ARCH_MSM8226
 	rc = request_firmware((const struct firmware **)&es705_priv.vs,
 			      vs_filename, es705_priv.dev);
 	if (rc) {
@@ -4750,6 +4807,7 @@ int es705_core_probe(struct device *dev)
 			__func__, vs_filename, rc);
 		goto request_vs_firmware_error;
 	}
+#endif /* CONFIG_ARCH_MSM8226 */
 
 #ifdef ES705_VDDCORE_MAX77826
 	es705_vdd_core = regulator_get(NULL, "max77826_ldo1");
@@ -4776,8 +4834,10 @@ int es705_core_probe(struct device *dev)
 
 	return rc;
 
+#ifndef CONFIG_ARCH_MSM8226
 request_vs_firmware_error:
 	release_firmware(es705_priv.standard);
+#endif /* CONFIG_ARCH_MSM8226 */
 request_firmware_error:
 gpio_init_error:
 #if defined(SAMSUNG_ES705_FEATURE)

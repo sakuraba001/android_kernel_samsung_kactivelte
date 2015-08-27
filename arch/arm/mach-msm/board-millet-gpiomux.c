@@ -18,6 +18,9 @@
  ******************************************************************************************
  */
 
+#ifdef CONFIG_WCNSS_IRIS_REGISTER_DUMP
+#include <linux/gpio.h>
+#endif
 #include <linux/init.h>
 #include <linux/ioport.h>
 #include <mach/board.h>
@@ -25,6 +28,13 @@
 #include <mach/gpiomux.h>
 #include <mach/socinfo.h>
 
+#ifdef CONFIG_WCNSS_IRIS_REGISTER_DUMP
+#define WLAN_CLK      44
+#define WLAN_SET      43
+#define WLAN_DATA0    42
+#define WLAN_DATA1    41
+#define WLAN_DATA2    40
+#endif
 
 #if defined (CONFIG_SEC_MILLET_PROJECT)
 static struct gpiomux_setting nc_suspend_cfg = {
@@ -77,10 +87,9 @@ static struct msm_gpiomux_config msm_hsic_configs[] = {
 
 #define KS8851_IRQ_GPIO 115
 
-#if defined (CONFIG_MACH_MILLETLTE_OPEN) || \
+#if defined (CONFIG_SEC_MILLETLTE_COMMON) || \
 	defined (CONFIG_SEC_MILLETWIFI_COMMON) || \
-	defined (CONFIG_MACH_MILLET3G_EUR) || \
-	defined (CONFIG_MACH_MILLETLTE_VZW)
+	defined (CONFIG_MACH_MILLET3G_EUR)
 #define NC_GPIO_CONFIG(gpio_num) { \
 		.gpio = gpio_num, \
 		.settings ={[GPIOMUX_SUSPENDED] = &nc_cfg,}\
@@ -91,6 +100,32 @@ static struct gpiomux_setting nc_cfg = {
 	.drv = GPIOMUX_DRV_2MA,
 	.pull = GPIOMUX_PULL_DOWN,
 	.dir = GPIOMUX_IN,
+};
+#endif
+
+#if defined(CONFIG_MACH_MILLETLTE_TMO)
+#define NC_GPIO_CONFIG_TMO(gpio_num) { \
+		.gpio = gpio_num, \
+		.settings ={[GPIOMUX_SUSPENDED] = &nc_cfg_tmo,}\
+}
+
+static struct gpiomux_setting nc_cfg_tmo = {
+	.func = GPIOMUX_FUNC_1,
+	.drv = GPIOMUX_DRV_2MA,
+	.pull = GPIOMUX_PULL_DOWN,
+};
+#endif
+
+#if defined(CONFIG_MACH_MILLETLTE_CAN)
+#define NC_GPIO_CONFIG_CAN(gpio_num) { \
+		.gpio = gpio_num, \
+		.settings ={[GPIOMUX_SUSPENDED] = &nc_cfg_can,}\
+}
+
+static struct gpiomux_setting nc_cfg_can = {
+	.func = GPIOMUX_FUNC_1,
+	.drv = GPIOMUX_DRV_2MA,
+	.pull = GPIOMUX_PULL_DOWN,
 };
 #endif
 
@@ -221,6 +256,20 @@ static struct gpiomux_setting wcnss_5wire_active_cfg = {
 	.drv  = GPIOMUX_DRV_6MA,
 	.pull = GPIOMUX_PULL_DOWN,
 };
+
+#ifdef CONFIG_WCNSS_IRIS_REGISTER_DUMP
+static struct gpiomux_setting wcnss_5gpio_suspend_cfg = {
+        .func = GPIOMUX_FUNC_GPIO,
+        .drv  = GPIOMUX_DRV_2MA,
+        .pull = GPIOMUX_PULL_UP,
+};
+
+static struct gpiomux_setting wcnss_5gpio_active_cfg = {
+        .func = GPIOMUX_FUNC_GPIO,
+	.drv  = GPIOMUX_DRV_6MA,
+	.pull = GPIOMUX_PULL_DOWN,
+};
+#endif
 
 static struct gpiomux_setting gpio_i2c_config = {
 	.func = GPIOMUX_FUNC_3,
@@ -944,6 +993,46 @@ static struct msm_gpiomux_config wcnss_5wire_interface[] = {
 	},
 };
 
+#ifdef CONFIG_WCNSS_IRIS_REGISTER_DUMP
+static struct msm_gpiomux_config wcnss_5gpio_interface[] = {
+	{
+		.gpio = 40,
+		.settings = {
+			[GPIOMUX_ACTIVE]    = &wcnss_5gpio_active_cfg,
+			[GPIOMUX_SUSPENDED] = &wcnss_5gpio_suspend_cfg,
+		},
+	},
+	{
+		.gpio = 41,
+		.settings = {
+			[GPIOMUX_ACTIVE]    = &wcnss_5gpio_active_cfg,
+			[GPIOMUX_SUSPENDED] = &wcnss_5gpio_suspend_cfg,
+		},
+	},
+	{
+		.gpio = 42,
+		.settings = {
+			[GPIOMUX_ACTIVE]    = &wcnss_5gpio_active_cfg,
+			[GPIOMUX_SUSPENDED] = &wcnss_5gpio_suspend_cfg,
+		},
+	},
+	{
+		.gpio = 43,
+		.settings = {
+			[GPIOMUX_ACTIVE]    = &wcnss_5gpio_active_cfg,
+			[GPIOMUX_SUSPENDED] = &wcnss_5gpio_suspend_cfg,
+		},
+	},
+	{
+		.gpio = 44,
+		.settings = {
+			[GPIOMUX_ACTIVE]    = &wcnss_5gpio_active_cfg,
+			[GPIOMUX_SUSPENDED] = &wcnss_5gpio_suspend_cfg,
+		},
+	},
+};
+#endif
+
 static struct gpiomux_setting gpio_suspend_config[] = {
 	{
 		.func = GPIOMUX_FUNC_GPIO,  /* IN-NP */
@@ -1500,7 +1589,7 @@ static void msm_gpiomux_sdc3_install(void) {}
 
 extern int system_rev;
 
-#if defined (CONFIG_MACH_MILLETLTE_OPEN)
+#if defined (CONFIG_MACH_MILLETLTE_OPEN) || defined (CONFIG_MACH_MILLETLTE_KOR)
 static struct msm_gpiomux_config millet_nc_gpio_cfgs[] __initdata = {
 	NC_GPIO_CONFIG(115),
 	NC_GPIO_CONFIG(116),
@@ -1530,10 +1619,17 @@ static struct msm_gpiomux_config milletwifi_nc_gpio_cfgs[] __initdata = {
 	NC_GPIO_CONFIG(116),
 };
 #endif
-#if defined (CONFIG_MACH_MILLETLTE_VZW)
-static struct msm_gpiomux_config milletltevzw_nc_gpio_cfgs[] __initdata = {
+#if defined (CONFIG_MACH_MILLETLTE_VZW) || defined(CONFIG_MACH_MILLETLTE_ATT) || defined(CONFIG_MACH_MILLETLTE_TMO) || defined(CONFIG_MACH_MILLETLTE_CAN)
+static struct msm_gpiomux_config milletltevzw_att_nc_gpio_cfgs[] __initdata = {
 	NC_GPIO_CONFIG(2),
 	NC_GPIO_CONFIG(3),
+#if defined(CONFIG_MACH_MILLETLTE_TMO)
+	NC_GPIO_CONFIG_TMO(22),
+#elif defined(CONFIG_MACH_MILLETLTE_CAN)
+	NC_GPIO_CONFIG_CAN(22),
+#else
+	NC_GPIO_CONFIG(22),
+#endif
 	NC_GPIO_CONFIG(52),
 };
 #endif
@@ -1549,7 +1645,7 @@ static struct msm_gpiomux_config millet3g_nc_gpio_cfgs[] __initdata = {
 };
 #endif
 
-#if defined (CONFIG_MACH_MILLETLTE_VZW)
+#if defined (CONFIG_SEC_MILLET_PROJECT)
 static struct gpiomux_setting gpio_10_sda_config = {
 	.func = GPIOMUX_FUNC_GPIO,
 	.drv = GPIOMUX_DRV_2MA,
@@ -1568,6 +1664,21 @@ static struct msm_gpiomux_config milletltevzw_gpio_10[] __initdata = {
 };
 #endif
 
+#if defined (CONFIG_MACH_MILLETLTE_ATT) || defined(CONFIG_MACH_MILLETLTE_TMO) || defined(CONFIG_MACH_MILLETLTE_CAN)
+static struct msm_gpiomux_config milletatt_tmo_nc_gpio_107[] __initdata = {
+	NC_GPIO_CONFIG(107),	// NC, revision 1 onwards
+};
+#endif
+#if defined (CONFIG_MACH_MILLETLTE_VZW)
+static struct msm_gpiomux_config milletvzw_nc_gpio_22[] __initdata = {
+	NC_GPIO_CONFIG(22),
+};
+static struct msm_gpiomux_config milletvzw_nc_gpio_107[] __initdata = {
+	NC_GPIO_CONFIG(107),	// NC only after revision 4
+};
+#endif
+
+
 void __init msm8226_init_gpiomux(void)
 {
 	int rc;
@@ -1577,7 +1688,7 @@ void __init msm8226_init_gpiomux(void)
 		pr_err("%s failed %d\n", __func__, rc);
 		return;
 	}
-#if defined (CONFIG_MACH_MILLETLTE_VZW)
+#if defined (CONFIG_SEC_MILLET_PROJECT)
 	msm_gpiomux_install(milletltevzw_gpio_10, ARRAY_SIZE(milletltevzw_gpio_10));
 #endif
 #if defined(CONFIG_KS8851) || defined(CONFIG_KS8851_MODULE)
@@ -1608,10 +1719,10 @@ void __init msm8226_init_gpiomux(void)
 		msm_gpiomux_install(msm_keyboad_cypress_configs,
 				ARRAY_SIZE(msm_keyboad_cypress_configs));
 #elif defined(CONFIG_SEC_MILLET_PROJECT)
-msm_gpiomux_install(msm_melfas_configs,
+	msm_gpiomux_install(msm_melfas_configs,
 				ARRAY_SIZE(msm_melfas_configs));
 #else
-		msm_gpiomux_install(msm_synaptics_configs,
+	msm_gpiomux_install(msm_synaptics_configs,
 				ARRAY_SIZE(msm_synaptics_configs));
 #endif
 	if (of_board_is_skuf())
@@ -1654,49 +1765,169 @@ msm_gpiomux_install(msm_melfas_configs,
 
 	msm_gpiomux_install(msm_ta_nchg_configs, ARRAY_SIZE(msm_ta_nchg_configs));
 	msm_gpiomux_install(msm_ta_int_n_configs, ARRAY_SIZE(msm_ta_int_n_configs));
-  #if defined (CONFIG_SEC_MILLETLTE_COMMON)
-  if ( system_rev >= 3)
-  {
-    msm_gpiomux_install(ovp_enable_configs, ARRAY_SIZE(ovp_enable_configs));
-  }
-  #else
-    msm_gpiomux_install(ovp_enable_configs, ARRAY_SIZE(ovp_enable_configs));
-  #endif
+#if defined (CONFIG_SEC_MILLETLTE_COMMON)
+	if ( system_rev >= 3)
+	{
+		msm_gpiomux_install(ovp_enable_configs, ARRAY_SIZE(ovp_enable_configs));
+	}
+#else
+	msm_gpiomux_install(ovp_enable_configs, ARRAY_SIZE(ovp_enable_configs));
+#endif
 #if defined (CONFIG_SEC_MILLETWIFI_COMMON)
 	msm_gpiomux_install(milletwifi_nc_gpio_cfgs, ARRAY_SIZE(milletwifi_nc_gpio_cfgs));
 #endif
-#if defined (CONFIG_MACH_MILLETLTE_OPEN)
-msm_gpiomux_install(millet_nc_gpio_cfgs, ARRAY_SIZE(millet_nc_gpio_cfgs));
-if ( system_rev >= 3){
-	msm_gpiomux_install(millet_nc3_gpio_cfgs, ARRAY_SIZE(millet_nc3_gpio_cfgs));
-}
+#if defined (CONFIG_MACH_MILLETLTE_OPEN) || defined (CONFIG_MACH_MILLETLTE_KOR)
+	msm_gpiomux_install(millet_nc_gpio_cfgs, ARRAY_SIZE(millet_nc_gpio_cfgs));
+	if ( system_rev >= 3){
+		msm_gpiomux_install(millet_nc3_gpio_cfgs, ARRAY_SIZE(millet_nc3_gpio_cfgs));
+	}
 #endif
 #if defined (CONFIG_MACH_MILLET3G_EUR)
-if ( system_rev >= 2)
-	msm_gpiomux_install(millet3g_nc_gpio_cfgs, ARRAY_SIZE(millet3g_nc_gpio_cfgs));
+	if ( system_rev >= 2)
+		msm_gpiomux_install(millet3g_nc_gpio_cfgs, ARRAY_SIZE(millet3g_nc_gpio_cfgs));
 #endif
 #if defined (CONFIG_MACH_MILLETLTE_VZW)
-if ( system_rev >= 1)
-	msm_gpiomux_install(milletltevzw_nc_gpio_cfgs, ARRAY_SIZE(milletltevzw_nc_gpio_cfgs));
+	msm_gpiomux_install(milletvzw_nc_gpio_22, ARRAY_SIZE(milletvzw_nc_gpio_22));
+
+	if ( system_rev >= 4)
+		msm_gpiomux_install(milletvzw_nc_gpio_107, ARRAY_SIZE(milletvzw_nc_gpio_107));
+
+	if ( system_rev >= 1)
+		msm_gpiomux_install(milletltevzw_att_nc_gpio_cfgs, ARRAY_SIZE(milletltevzw_att_nc_gpio_cfgs));
 #endif
+#if defined (CONFIG_MACH_MILLETLTE_ATT) || defined(CONFIG_MACH_MILLETLTE_TMO) || defined(CONFIG_MACH_MILLETLTE_CAN)
+	msm_gpiomux_install(milletltevzw_att_nc_gpio_cfgs, ARRAY_SIZE(milletltevzw_att_nc_gpio_cfgs));
+	msm_gpiomux_install(ovp_enable_configs, ARRAY_SIZE(ovp_enable_configs));
+	if (system_rev >= 1)
+		msm_gpiomux_install(milletatt_tmo_nc_gpio_107, ARRAY_SIZE(milletatt_tmo_nc_gpio_107));
+#endif
+
 #if defined(CONFIG_SAMSUNG_JACK)
 	msm_gpiomux_install(msm_earjack_gpio_configs, ARRAY_SIZE(msm_earjack_gpio_configs));
 #endif
 	if(!poweroff_charging)
 	msm_gpiomux_install(wcdcodec_reset_cfg, ARRAY_SIZE(wcdcodec_reset_cfg));
-#ifdef CONFIG_SND_SOC_MAX98504
-#if defined(CONFIG_MACH_MILLETLTE_OPEN)
-				if ( system_rev >= 0 && system_rev < 3)
-#elif defined (CONFIG_MACH_MILLET3G_EUR)
-				if ( system_rev >= 2 && system_rev < 4)
-#elif defined(CONFIG_MACH_MILLETWIFI_OPEN)
-				if ( system_rev >= 0 && system_rev < 5)
-#endif
 
-		{
-			msm_gpiomux_install(msm8226_tertiary_mi2s_configs,ARRAY_SIZE(msm8226_tertiary_mi2s_configs));
-			msm_gpiomux_install(msm8226_blsp_codec_configs,ARRAY_SIZE(msm8226_blsp_codec_configs));
-			msm_gpiomux_install(msm8226_amp_int_configs,ARRAY_SIZE(msm8226_amp_int_configs));
-		}
+#ifdef CONFIG_SND_SOC_MAX98504
+#if defined(CONFIG_MACH_MILLETLTE_OPEN) || defined (CONFIG_MACH_MILLETLTE_KOR)
+	if ( system_rev >= 0 && system_rev < 3)
+#elif defined (CONFIG_MACH_MILLET3G_EUR)
+	if ( system_rev >= 2 && system_rev < 4)
+#elif defined(CONFIG_MACH_MILLETWIFI_OPEN)
+	if ( system_rev >= 0 && system_rev < 5)
+#endif
+	{
+		msm_gpiomux_install(msm8226_tertiary_mi2s_configs,ARRAY_SIZE(msm8226_tertiary_mi2s_configs));
+		msm_gpiomux_install(msm8226_blsp_codec_configs,ARRAY_SIZE(msm8226_blsp_codec_configs));
+		msm_gpiomux_install(msm8226_amp_int_configs,ARRAY_SIZE(msm8226_amp_int_configs));
+	}
 #endif
 }
+
+#ifdef CONFIG_WCNSS_IRIS_REGISTER_DUMP
+static void wcnss_switch_to_gpio(void)
+{
+	/* Switch MUX to GPIO */
+	msm_gpiomux_install(wcnss_5gpio_interface,
+			ARRAY_SIZE(wcnss_5gpio_interface));
+
+	/* Ensure GPIO config */
+	gpio_direction_input(WLAN_DATA2);
+	gpio_direction_input(WLAN_DATA1);
+	gpio_direction_input(WLAN_DATA0);
+	gpio_direction_output(WLAN_SET, 0);
+	gpio_direction_output(WLAN_CLK, 0);
+}
+
+static void wcnss_switch_to_5wire(void)
+{
+	msm_gpiomux_install(wcnss_5wire_interface,
+			ARRAY_SIZE(wcnss_5wire_interface));
+}
+
+u32 wcnss_rf_read_reg(u32 rf_reg_addr)
+{
+	int count = 0;
+	u32 rf_cmd_and_addr = 0;
+	u32 rf_data_received = 0;
+	u32 rf_bit = 0;
+
+	wcnss_switch_to_gpio();
+
+	/* Reset the signal if it is already being used. */
+	gpio_set_value(WLAN_SET, 0);
+	gpio_set_value(WLAN_CLK, 0);
+
+	/* We start with cmd_set high WLAN_SET = 1. */
+	gpio_set_value(WLAN_SET, 1);
+
+	gpio_direction_output(WLAN_DATA0, 1);
+	gpio_direction_output(WLAN_DATA1, 1);
+	gpio_direction_output(WLAN_DATA2, 1);
+
+	gpio_set_value(WLAN_DATA0, 0);
+	gpio_set_value(WLAN_DATA1, 0);
+	gpio_set_value(WLAN_DATA2, 0);
+
+	/* Prepare command and RF register address that need to sent out.
+	 * Make sure that we send only 14 bits from LSB.
+	 */
+	rf_cmd_and_addr  = (((WLAN_RF_READ_REG_CMD) |
+		(rf_reg_addr << WLAN_RF_REG_ADDR_START_OFFSET)) &
+		WLAN_RF_READ_CMD_MASK);
+
+	for (count = 0; count < 5; count++) {
+		gpio_set_value(WLAN_CLK, 0);
+
+		rf_bit = (rf_cmd_and_addr & 0x1);
+		gpio_set_value(WLAN_DATA0, rf_bit ? 1 : 0);
+		rf_cmd_and_addr = (rf_cmd_and_addr >> 1);
+
+		rf_bit = (rf_cmd_and_addr & 0x1);
+		gpio_set_value(WLAN_DATA1, rf_bit ? 1 : 0);
+		rf_cmd_and_addr = (rf_cmd_and_addr >> 1);
+
+		rf_bit = (rf_cmd_and_addr & 0x1);
+		gpio_set_value(WLAN_DATA2, rf_bit ? 1 : 0);
+		rf_cmd_and_addr = (rf_cmd_and_addr >> 1);
+
+		/* Send the data out WLAN_CLK = 1 */
+		gpio_set_value(WLAN_CLK, 1);
+	}
+
+	/* Pull down the clock signal */
+	gpio_set_value(WLAN_CLK, 0);
+
+	/* Configure data pins to input IO pins */
+	gpio_direction_input(WLAN_DATA0);
+	gpio_direction_input(WLAN_DATA1);
+	gpio_direction_input(WLAN_DATA2);
+
+	for (count = 0; count < 2; count++) {
+		gpio_set_value(WLAN_CLK, 1);
+		gpio_set_value(WLAN_CLK, 0);
+	}
+
+	rf_bit = 0;
+	for (count = 0; count < 6; count++) {
+		gpio_set_value(WLAN_CLK, 1);
+		gpio_set_value(WLAN_CLK, 0);
+
+		rf_bit = gpio_get_value(WLAN_DATA0);
+		rf_data_received |= (rf_bit << (count * 3 + 0));
+
+		if (count != 5) {
+			rf_bit = gpio_get_value(WLAN_DATA1);
+			rf_data_received |= (rf_bit << (count * 3 + 1));
+
+			rf_bit = gpio_get_value(WLAN_DATA2);
+			rf_data_received |= (rf_bit << (count * 3 + 2));
+		}
+	}
+
+	gpio_set_value(WLAN_SET, 0);
+	wcnss_switch_to_5wire();
+
+	return rf_data_received;
+}
+#endif

@@ -26,7 +26,6 @@
 /*			sii8240,gpio_mhl_en = <&pma8084_mpps 5 0x1>;*/
 /*			sii8240,gpio_mhl_en_type = "pm_mpps";*/
 			sii8240,swing_level = <0x25>;
-			sii8240,damping = <0x00>;
 
 			sii8240,gpio_mhl_irq = <&msmgpio 31 0x00>;
 			sii8240,gpio_mhl_wakeup = <0>; /* <&msmgpio 96 0x00>; */

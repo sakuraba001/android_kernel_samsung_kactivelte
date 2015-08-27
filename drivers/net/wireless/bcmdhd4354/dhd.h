@@ -4,7 +4,7 @@
  * Provides type definitions and function prototypes used to link the
  * DHD OS, bus, and protocol modules.
  *
- * Copyright (C) 1999-2014, Broadcom Corporation
+ * Copyright (C) 1999-2015, Broadcom Corporation
  * 
  *      Unless you and Broadcom execute a separate written software license
  * agreement governing use of this software, this software is licensed to you
@@ -24,7 +24,7 @@
  * software in any way with any other Broadcom software provided under a license
  * other than the GPL, without Broadcom's express prior written consent.
  *
- * $Id: dhd.h 457596 2014-02-24 02:24:14Z $
+ * $Id: dhd.h 529161 2015-01-26 11:53:15Z $
  */
 
 /****************
@@ -141,7 +141,8 @@ enum dhd_prealloc_index {
 	DHD_PREALLOC_WIPHY_ESCAN1,
 #endif /* CUSTOMER_HW4 && DUAL_ESCAN_RESULT_BUFFER */
 #endif /* STATIC_WL_PRIV_STRUCT */
-	DHD_PREALLOC_DHD_INFO = 7
+	DHD_PREALLOC_DHD_INFO = 7,
+	DHD_PREALLOC_WLFC_INFO = 8
 };
 
 /* Packet alignment for most efficient SDIO (can change based on platform) */
@@ -161,14 +162,15 @@ typedef struct reorder_info {
 } reorder_info_t;
 
 #ifdef DHDTCPACK_SUPPRESS
-/* Max number of TCP streams that have own src/dst IP addrs and TCP ports */
-#define MAXTCPSTREAMS 4	/* Keep this to be power of 2 */
-typedef struct tcp_ack_info {
-	void *pkt_in_q;			/* TCP ACK packet that is already in txq or DelayQ */
-	void *pkt_ether_hdr;	/* Ethernet header pointer of pkt_in_q */
-} tcp_ack_info_t;
-
-void dhd_onoff_tcpack_sup(void *pub, bool on);
+#define TCPACK_SUP_OFF		0	/* TCPACK suppress off */
+/* Replace TCPACK in txq when new coming one has higher ACK number. */
+#define TCPACK_SUP_REPLACE	1
+/* TCPACK_SUP_REPLACE + delayed TCPACK TX unless ACK to PSH DATA.
+ * This will give benefits to Half-Duplex bus interface(e.g. SDIO) that
+ * 1. we are able to read TCP DATA packets first from the bus
+ * 2. TCPACKs that do not need to hurry delivered remains longer in TXQ so can be suppressed.
+ */
+#define TCPACK_SUP_DELAYTX	2
 #endif /* DHDTCPACK_SUPPRESS */
 
 /* Common structure for module and instance linkage */
@@ -283,6 +285,8 @@ typedef struct dhd_pub {
 	bool	proptxstatus_module_ignore;
 	bool	proptxstatus_credit_ignore;
 	bool	proptxstatus_txstatus_ignore;
+
+	bool	wlfc_rxpkt_chk;
 	/*
 	 * implement below functions in each platform if needed.
 	 */
@@ -317,9 +321,8 @@ typedef struct dhd_pub {
 	uint32 store_idx;
 	uint32 sent_idx;
 #ifdef DHDTCPACK_SUPPRESS
-	bool tcpack_sup_enabled;
-	int tcp_ack_info_cnt;
-	tcp_ack_info_t tcp_ack_info_tbl[MAXTCPSTREAMS];
+	uint8 tcpack_sup_mode;		/* TCPACK suppress mode */
+	void *tcpack_sup_module;	/* TCPACK suppress module */
 #endif /* DHDTCPACK_SUPPRESS */
 #if defined(ARP_OFFLOAD_SUPPORT)
 	uint32 arp_version;
@@ -335,6 +338,13 @@ typedef struct dhd_pub {
 	struct task_struct * current_rxf;
 	int chan_isvht80;
 #endif /* CUSTOM_SET_CPUCORE */
+#if defined(CUSTOMER_HW4) && defined(ARGOS_CPU_SCHEDULER)
+	cpumask_var_t default_cpu_mask;
+	cpumask_var_t dpc_affinity_cpu_mask;
+	cpumask_var_t rxf_affinity_cpu_mask;
+	bool affinity_isdpc;
+	bool affinity_isrxf;
+#endif /* CUSTOMER_HW4 && ARGOS_CPU_SCHEDULER */
 } dhd_pub_t;
 #if defined(CUSTOMER_HW4)
 #define MAX_RESCHED_CNT 600
@@ -472,17 +482,15 @@ inline static void MUTEX_UNLOCK_SOFTAP_SET(dhd_pub_t * dhdp)
 			val, __FUNCTION__, __LINE__); \
 		dhd_os_wake_lock_ctrl_timeout_enable(pub, val); \
 	} while (0)
-#define DHD_OS_WAKE_LOCK_CTRL_TIMEOUT_CANCEL(publ) \
+#define DHD_OS_WAKE_LOCK_CTRL_TIMEOUT_CANCEL(pub) \
 	do { \
 		printf("call wake_lock_ctrl_timeout_cancel: %s %d\n", \
-			val, __FUNCTION__, __LINE__); \
+			__FUNCTION__, __LINE__); \
 		dhd_os_wake_lock_ctrl_timeout_cancel(pub); \
 	} while (0)
 #else
 #define DHD_OS_WAKE_LOCK(pub)			dhd_os_wake_lock(pub)
 #define DHD_OS_WAKE_UNLOCK(pub)		dhd_os_wake_unlock(pub)
-#define DHD_OS_WD_WAKE_LOCK(pub)		dhd_os_wd_wake_lock(pub)
-#define DHD_OS_WD_WAKE_UNLOCK(pub)		dhd_os_wd_wake_unlock(pub)
 #define DHD_OS_WAKE_LOCK_TIMEOUT(pub)		dhd_os_wake_lock_timeout(pub)
 #define DHD_OS_WAKE_LOCK_RX_TIMEOUT_ENABLE(pub, val) \
 	dhd_os_wake_lock_rx_timeout_enable(pub, val)
@@ -491,6 +499,9 @@ inline static void MUTEX_UNLOCK_SOFTAP_SET(dhd_pub_t * dhdp)
 #define DHD_OS_WAKE_LOCK_CTRL_TIMEOUT_CANCEL(pub) \
 	dhd_os_wake_lock_ctrl_timeout_cancel(pub)
 #endif /* DHD_DEBUG_WAKE_LOCK */
+
+#define DHD_OS_WD_WAKE_LOCK(pub)		dhd_os_wd_wake_lock(pub)
+#define DHD_OS_WD_WAKE_UNLOCK(pub)		dhd_os_wd_wake_unlock(pub)
 #define DHD_PACKET_TIMEOUT_MS	500
 #define DHD_EVENT_TIMEOUT_MS	1500
 
@@ -928,6 +939,7 @@ extern bool dhd_prec_drop_pkts(dhd_pub_t *dhdp, struct pktq *pq, int prec, f_dro
 #ifdef PROP_TXSTATUS
 int dhd_os_wlfc_block(dhd_pub_t *pub);
 int dhd_os_wlfc_unblock(dhd_pub_t *pub);
+extern const uint8 prio2fifo[];
 #endif /* PROP_TXSTATUS */
 
 uint8* dhd_os_prealloc(dhd_pub_t *dhdpub, int section, uint size, bool kmalloc_if_fail);

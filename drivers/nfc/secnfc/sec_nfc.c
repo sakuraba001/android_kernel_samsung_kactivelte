@@ -52,6 +52,8 @@
 #include <linux/regulator/consumer.h>
 #include <mach/gpiomux.h>
 
+#include <linux/wakelock.h>
+
 
 #ifndef BU80003GUL
 
@@ -81,9 +83,7 @@
 #define I2C_ANT_ADDR 0x01
 
 extern int poweroff_charging;
-extern unsigned int system_rev;
 
-static unsigned int tvdd_gpio = -1;
 static struct i2c_msg gread_msgs[] = {
 	{
 		.addr	= 0,
@@ -201,19 +201,22 @@ static const struct file_operations fops_felica_epc = {
 
 int felica_epc_setLockState(int state)
 {
-	int ret;
-	unsigned char write_buff[2];
+	char cen;
+        int ret;
+        unsigned char write_buff[2];
+
+	cen =1;
 
 	gwrite_msgs[0].buf = &write_buff[0];
 	gwrite_msgs[0].addr = I2C_ADDR;
 	write_buff[0] = 0x02;
 	write_buff[1] = state;
 	ret = i2c_transfer(bu80003gul_i2c_client->adapter, gwrite_msgs, 1);
-	if (ret < 0) {
-			EPC_ERR(" %s ERROR(i2c_transfer), ret=[%d]",
-						   __func__, ret);
-			return -EIO;
-	}
+        if (ret < 0) {
+                EPC_ERR(" %s ERROR(i2c_transfer), ret=[%d]",
+                               __func__, ret);
+                return -EIO;
+        }
 
 return ret;
 }
@@ -391,6 +394,7 @@ struct sec_nfc_info {
 	enum sec_nfc_state state;
 	struct device *dev;
 	struct sec_nfc_platform_data *pdata;
+	struct wake_lock wake_lock;
 
 #ifdef	CONFIG_SEC_NFC_I2C
 	struct i2c_client *i2c_dev;
@@ -437,9 +441,8 @@ static int sec_nfc_set_state(struct sec_nfc_info *info,
 	}
 
 	msleep(SEC_NFC_VEN_WAIT_TIME);
-	if (state != SEC_NFC_ST_OFF) {
+	if (state != SEC_NFC_ST_OFF)
 		gpio_set_value(pdata->ven, 1);
-	}
 
 	msleep(SEC_NFC_VEN_WAIT_TIME);
 	dev_dbg(info->dev, "Power state is : %d\n", state);
@@ -665,10 +668,21 @@ static long sec_nfc_ioctl(struct file *file, unsigned int cmd,
                 firm = gpio_get_value(info->pdata->firm);
                 pr_info("%s: [NFC] Firm pin = %d\n", __func__, firm);
 
-		if(mode == SEC_NFC_ST_UART_ON)
+		if(mode == SEC_NFC_ST_UART_ON) {
 			gpio_set_value(info->pdata->firm, STATE_FIRM_HIGH);
-		else if(mode == SEC_NFC_ST_UART_OFF)
+
+			if(!wake_lock_active(&info->wake_lock)) {
+				pr_info("%s: [NFC] wake lock.\n", __func__);
+				wake_lock(&info->wake_lock);
+			}
+		} else if(mode == SEC_NFC_ST_UART_OFF) {
 			gpio_set_value(info->pdata->firm, STATE_FIRM_LOW);
+
+			if(wake_lock_active(&info->wake_lock)) {
+				pr_info("%s: [NFC] wake unlock after 2 sec.\n", __func__);
+				wake_lock_timeout(&info->wake_lock, 2 * HZ);
+			}
+		}
 		else
 			ret = -EFAULT;
 
@@ -707,7 +721,7 @@ uint8_t check_custom_kernel(void)
 	scm_call(SEC_NFC_SVC_FUSE, SEC_NFC_IS_SW_FUSE_BLOWN_ID, cmd_buf,
 						cmd_len, &resp_buf, resp_len);
 	pr_info(" %s END resp_buf = %d\n",__func__, resp_buf);
-
+	
 	return resp_buf;
 }
 // End of Security
@@ -722,12 +736,8 @@ static int sec_nfc_parse_dt(struct device *dev,
 		0, &pdata->pon_gpio_flags);
 	pdata->firm = of_get_named_gpio_flags(np, "sec-nfc,rfs-gpio",
 		0, &pdata->rfs_gpio_flags);
-
-	if(system_rev >= 14) {
-		pdata->tvdd = of_get_named_gpio_flags(np, "sec-nfc,tvdd-gpio",
-			0, &pdata->tvdd_gpio_flags);
-		tvdd_gpio = pdata->tvdd;
-	}
+	pdata->tvdd = of_get_named_gpio_flags(np, "sec-nfc,tvdd-gpio",
+		0, &pdata->tvdd_gpio_flags);
 	return 0;
 }
 
@@ -887,7 +897,8 @@ static int sec_nfc_probe(struct platform_device *pdev)
     // Check tamper
     if (check_custom_kernel() == 1)
     {
-        pr_info("%s: The kernel is tampered. Couldn't initialize NFC. \n", __func__);
+//        pr_info("%s: The kernel is tampered. Couldn't initialize NFC. \n", __func__);
+//        return -EPERM;
     }
 
 	if(dev) {
@@ -906,32 +917,29 @@ static int sec_nfc_probe(struct platform_device *pdev)
 
 	err = sec_nfc_parse_dt(dev, pdata);
 
-	if(system_rev >= 14) {
-		ret = gpio_request(pdata->tvdd, "nfc_tvdd");
+	ret = gpio_request(pdata->tvdd, "nfc_tvdd");
 		if (ret) {
 			dev_err(dev, "failed to get gpio tvdd\n");
-			kfree(pdata);
-			goto err_pdata;
+			goto err_gpio_tvdd;
 		}
-		ret = gpio_tlmm_config (GPIO_CFG(41, GPIOMUX_FUNC_GPIO,
+	ret = gpio_tlmm_config (GPIO_CFG(41, GPIOMUX_FUNC_GPIO,
 					GPIO_CFG_OUTPUT, GPIO_CFG_NO_PULL, GPIO_CFG_2MA),
 					GPIO_CFG_ENABLE);
-		if (ret) {
+	if (ret) {
+		dev_err(dev, "failed to configure GPIO_41. ret %d \n", ret);
+	} else {
 
-			dev_err(dev, "failed to configure GPIO_41. ret %d \n", ret);
+		if (poweroff_charging) {
+			pr_info("%s: [poweroff_charging] Setting the GPIO_41 pin LOW\n",__func__);
+			gpio_set_value(41, 0);
+			sec_nfc_uart_suspend();
 		} else {
-
-			if (poweroff_charging) {
-				pr_info("%s: [poweroff_charging] Setting the GPIO_41 pin LOW\n",__func__);
-				gpio_set_value(41, 0);
-				sec_nfc_uart_suspend();
-			} else {
-				pr_info("%s: [Normal case] Setting the GPIO_41 pin HIGH \n",__func__);
-				gpio_set_value(41, 1);
-			}
-			pr_info("%s: Set the GPIO_41 (%d) to HIGH. \n", __func__, pdata->tvdd);
+			pr_info("%s: [Normal case] Setting the GPIO_41 pin HIGH \n",__func__);
+			gpio_set_value(41, 1);
 		}
+			pr_info("%s: Set the GPIO_41 (%d) to HIGH. \n", __func__, pdata->tvdd);
 	}
+
 	pr_info("gpio assign success!\n");
 
 	info = kzalloc(sizeof(struct sec_nfc_info), GFP_KERNEL);
@@ -977,6 +985,8 @@ static int sec_nfc_probe(struct platform_device *pdev)
 
 #endif
 
+	wake_lock_init(&info->wake_lock, WAKE_LOCK_SUSPEND, "NFCWAKE");
+
 	info->miscdev.minor = MISC_DYNAMIC_MINOR;
 	info->miscdev.name = SEC_NFC_DRIVER_NAME;
 	info->miscdev.fops = &sec_nfc_fops;
@@ -1018,7 +1028,8 @@ static int sec_nfc_probe(struct platform_device *pdev)
 	pr_info("%s: exit - sec-nfc probe finish\n", __func__);
 
 	return 0;
-
+err_gpio_tvdd:
+	gpio_free(pdata->tvdd);
 err_gpio_firm:
 	gpio_free(pdata->firm);
 err_gpio_ven:
@@ -1034,7 +1045,8 @@ err_info_alloc:
 		if (info->pdata != NULL) {
 			kfree(info->pdata);
 		}
-		kfree(info);
+		wake_lock_destroy(&info->wake_lock);
+	kfree(info);
 	}
 err_pdata:
 	pr_info("%s: exit - sec-nfc probe finish with ERROR! - ret = 0x%X\n", __func__, ret);
@@ -1044,9 +1056,11 @@ err_pdata:
 
 static void sec_nfc_shutdown(struct platform_device *pdev)
 {
-	if(system_rev >= 14) {
-		gpio_set_value(tvdd_gpio, 0);
-	}
+	struct sec_nfc_info *info = dev_get_drvdata(&pdev->dev);
+	struct sec_nfc_platform_data *pdata = info->pdata;
+
+	if (pdata->tvdd)
+		gpio_set_value(pdata->tvdd, 0);
 }
 
 
@@ -1083,6 +1097,8 @@ ERR_SEC_NFC_REMOVE_INFO:
 #ifdef	CONFIG_SEC_NFC_I2C
 	free_irq(pdata->irq, info);
 #endif
+
+	wake_lock_destroy(&info->wake_lock);
 
 #ifdef BU80003GUL
 	i2c_del_driver(&bu80003gul_i2c_driver);

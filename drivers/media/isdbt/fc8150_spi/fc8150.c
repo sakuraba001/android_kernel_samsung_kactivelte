@@ -192,7 +192,7 @@ ISBT_EN_ERR:
 static void isdbt_gpio_init(void)
 {
 	printk("%s\n",__func__);
-/*	
+#ifdef CONFIG_ISDBT_FC8150_HKDI
 	gpio_tlmm_config(GPIO_CFG(isdbt_pdata->gpio_spi_di, GPIOMUX_FUNC_1,
 					 GPIO_CFG_INPUT, GPIO_CFG_NO_PULL, GPIO_CFG_8MA),
 					 GPIO_CFG_ENABLE);
@@ -208,7 +208,7 @@ static void isdbt_gpio_init(void)
 	gpio_tlmm_config(GPIO_CFG(isdbt_pdata->gpio_spi_clk, GPIOMUX_FUNC_1,
 					 GPIO_CFG_OUTPUT, GPIO_CFG_NO_PULL, GPIO_CFG_8MA),
 					 GPIO_CFG_ENABLE);
-*/
+#endif
 					 
 	gpio_tlmm_config(GPIO_CFG(isdbt_pdata->gpio_en, GPIOMUX_FUNC_GPIO,
 						GPIO_CFG_OUTPUT, GPIO_CFG_PULL_DOWN, GPIO_CFG_2MA),
@@ -1142,7 +1142,12 @@ static int isdbt_resume(struct platform_device *pdev)
 
 
 static const struct of_device_id isdbt_match_table[] = {
-	{   .compatible = "isdb_fc8300_pdata",
+	{
+#ifdef CONFIG_ISDBT_FC8150_HKDI
+	    .compatible = "isdb_pdata",
+#else
+	    .compatible = "isdb_fc8300_pdata",
+#endif
 	},
 	{}
 };

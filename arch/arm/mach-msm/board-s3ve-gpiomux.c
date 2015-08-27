@@ -725,6 +725,28 @@ static struct msm_gpiomux_config msm_earjack_gpio_configs[] __initdata = {
 	}
 };
 
+static struct gpiomux_setting codec_active_cfg = {
+	.func = GPIOMUX_FUNC_GPIO,
+	.drv = GPIOMUX_DRV_6MA,
+	.pull = GPIOMUX_PULL_NONE,
+};
+
+static struct gpiomux_setting codec_suspend_cfg = {
+	.func = GPIOMUX_FUNC_GPIO,
+	.drv = GPIOMUX_DRV_6MA,
+	.pull = GPIOMUX_PULL_DOWN,
+};
+
+static struct msm_gpiomux_config msm_cdc_reset_config[] __initdata = {
+	{
+		.gpio   = 72,
+		.settings = {
+			[GPIOMUX_ACTIVE]    = &codec_active_cfg,
+			[GPIOMUX_SUSPENDED] = &codec_suspend_cfg,
+		},
+	}
+};
+
 #ifdef CONFIG_MMC_MSM_SDC3_SUPPORT
 static struct gpiomux_setting sdc3_clk_actv_cfg = {
 	.func = GPIOMUX_FUNC_2,
@@ -1015,13 +1037,17 @@ void __init msm8226_init_gpiomux(void)
 	/* SDCC3 */
 	msm_gpiomux_sdc3_install();
 
+	/* Codec */
+	msm_gpiomux_install(msm_cdc_reset_config,
+		ARRAY_SIZE(msm_cdc_reset_config));
+
 	/* Earjack */
 	msm_gpiomux_install(msm_earjack_gpio_configs,
 		ARRAY_SIZE(msm_earjack_gpio_configs));
 
 	/* MUIC */
 	msm_gpiomux_install(muic_configs,
- 		ARRAY_SIZE(muic_configs));
+			ARRAY_SIZE(muic_configs));
 
 	/* NC */
 	msm_gpiomux_install(berluti3g_nc_gpio_cfgs, ARRAY_SIZE(berluti3g_nc_gpio_cfgs));

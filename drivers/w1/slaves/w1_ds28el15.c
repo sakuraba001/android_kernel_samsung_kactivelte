@@ -88,11 +88,18 @@
 #define ID_MIN		0
 #define ID_MAX		3
 #define CO_MIN		0
+#ifdef CONFIG_SEC_MEGA2LTE_COMMON
+#define CO_MAX		15
+#else
 #define CO_MAX		10
+#endif
 #define ID_DEFAULT	1
 #define CO_DEFAULT	1
 #define RETRY_LIMIT	10
 
+#ifdef CONFIG_W1_CF
+#define RETRY_LIMIT_CF	5
+#endif
 // misc state
 static unsigned short slave_crc16;
 
@@ -105,7 +112,7 @@ int verification = -1, id = 2, color;
 char g_sn[14];
 #endif
 #ifdef CONFIG_W1_CF
-int cf_node=-1;
+int cf_node = -1;
 #endif
 #ifdef CONFIG_SEC_H_PROJECT
 extern int verified;
@@ -649,7 +656,7 @@ int w1_ds28el15_read_memory_check(struct w1_slave *sl, int seg, int page, uchar 
 		docrc16(buf[i]);
 
 	if (slave_crc16 != 0xB001)
-		return -1;
+		return -2;
 
 	if (READ_EOP_BYTE(seg) == length) {
 		// check the second CRC16
@@ -660,7 +667,7 @@ int w1_ds28el15_read_memory_check(struct w1_slave *sl, int seg, int page, uchar 
 			docrc16(buf[i]);
 
 		if (slave_crc16 != 0xB001)
-			return -1;
+			return -2;
 	}
 
 	// copy the data to the read buffer
@@ -1906,6 +1913,9 @@ static bool w1_ds28el15_check_digit(const uchar *sn)
 	int i, tmp1 = 0, tmp2 = 0;
 	int cdigit = sn[3];
 
+	if (cdigit == 0x1e)
+		return true;
+
 	for (i=4;i<10;i++)
 		tmp1 += sn[i];
 
@@ -1942,9 +1952,14 @@ static void w1_ds28el15_slave_sn(const uchar *rdbuf)
 		for (i = 0 ; i < 14 ; i++)
 			sn[i] = w1_ds28el15_char_convert(rdbuf[i+4]);
 
+		pr_info("%s: %s\n", __func__, sn);
+
 		for (i = 0 ; i < 14 ; i++)
 			g_sn[i] = sn[13 - i];
 	} else {
+		for (i = 0 ; i < 14 ; i++)
+			sn[i] = w1_ds28el15_char_convert(rdbuf[i+4]);
+
 		pr_info("%s: sn is not good %s\n", __func__, sn);
 	}
 }
@@ -2036,6 +2051,7 @@ static int w1_ds28el15_add_slave(struct w1_slave *sl)
 {
 	int err = 0;
 #ifdef CONFIG_W1_CF
+	int count = 0, rst = 0;
 	u8 rdbuf[32];
 #endif
 
@@ -2113,10 +2129,17 @@ static int w1_ds28el15_add_slave(struct w1_slave *sl)
 #endif
 	{
 #ifdef CONFIG_W1_CF
-		if (w1_ds28el15_read_memory_check(sl, 0, 0, rdbuf, 32))
+		while (count < RETRY_LIMIT_CF) {
+			rst = w1_ds28el15_read_memory_check(sl, 0, 0, rdbuf, 32);
+			if (rst == 0)
+				break;
+			count++;
+		}
+		if (rst == -2)
 			cf_node = 1;
 		else
 			cf_node = 0;
+
 		pr_info("%s:COVER CLASS(%d)\n", __func__, cf_node);
 #endif
 

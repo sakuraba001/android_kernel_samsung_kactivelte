@@ -18,12 +18,23 @@
  ******************************************************************************************
  */
 
+#ifdef CONFIG_WCNSS_IRIS_REGISTER_DUMP
+#include <linux/gpio.h>
+#endif
 #include <linux/init.h>
 #include <linux/ioport.h>
 #include <mach/board.h>
 #include <mach/gpio.h>
 #include <mach/gpiomux.h>
 #include <mach/socinfo.h>
+
+#ifdef CONFIG_WCNSS_IRIS_REGISTER_DUMP
+#define WLAN_CLK      44
+#define WLAN_SET      43
+#define WLAN_DATA0    42
+#define WLAN_DATA1    41
+#define WLAN_DATA2    40
+#endif
 
 #ifdef CONFIG_USB_EHCI_MSM_HSIC
 #if !defined(CONFIG_MACH_MATISSE3G_OPEN)
@@ -61,7 +72,7 @@ static struct msm_gpiomux_config msm_hsic_configs[] = {
 
 #define KS8851_IRQ_GPIO 115
 
-#if defined(CONFIG_MACH_MATISSELTE_VZW) || defined(CONFIG_MACH_MATISSE3G_OPEN)
+#if defined(CONFIG_MACH_MATISSELTE_VZW) || defined(CONFIG_MACH_MATISSELTE_USC) || defined(CONFIG_MACH_MATISSE3G_OPEN)
 #define NC_GPIO_CONFIG(gpio_num) { \
 		.gpio = gpio_num, \
 		.settings ={[GPIOMUX_SUSPENDED] = &nc_cfg,}\
@@ -82,7 +93,8 @@ static struct gpiomux_setting nc_cfg = {
 };
 #endif
 
-#if defined(CONFIG_MACH_MATISSEWIFI_OPEN) || defined(CONFIG_MACH_MATISSELTE_OPEN)
+#if defined(CONFIG_MACH_MATISSEWIFI_OPEN) || defined(CONFIG_MACH_MATISSELTE_OPEN) || \
+	defined(CONFIG_MACH_MATISSEWIFIUS_OPEN)
 #define MAKE_NC_CONFIG_INIT_SLEEP(gpio_num) { \
 		.gpio = gpio_num, \
 		.settings ={ \
@@ -114,6 +126,40 @@ static struct msm_gpiomux_config matissewifi_open_nc_gpio_cfgs[] __initdata = {
 	MAKE_NC_CONFIG_INIT_SLEEP(116),
 };
 #endif
+#if defined(CONFIG_MACH_MATISSEWIFIUS_OPEN)
+static struct msm_gpiomux_config matissewifiue_open_nc_gpio_cfgs[] __initdata = {
+#ifndef CONFIG_NFC_PN547
+	MAKE_NC_CONFIG_INIT_SLEEP(0),
+	MAKE_NC_CONFIG_INIT_SLEEP(1),
+#endif
+#ifndef CONFIG_IR_REMOCON_MC96FR116
+	MAKE_NC_CONFIG_INIT_SLEEP(4),
+	MAKE_NC_CONFIG_INIT_SLEEP(5),
+	MAKE_NC_CONFIG_INIT_SLEEP(62),
+	MAKE_NC_CONFIG_INIT_SLEEP(116),
+#endif
+	MAKE_NC_CONFIG_INIT_SLEEP(32),
+	MAKE_NC_CONFIG_INIT_SLEEP(56),
+	MAKE_NC_CONFIG_INIT_SLEEP(57),
+	MAKE_NC_CONFIG_INIT_SLEEP(58),
+	MAKE_NC_CONFIG_INIT_SLEEP(59),
+	MAKE_NC_CONFIG_INIT_SLEEP(60),
+	MAKE_NC_CONFIG_INIT_SLEEP(66),
+};
+
+static struct msm_gpiomux_config matissewifiue_open_nc_gpio_rev5_cfgs[] __initdata = {
+	MAKE_NC_CONFIG_INIT_SLEEP(53),
+};
+
+#if defined(CONFIG_MACH_MATISSEWIFIUS_GOOGLE)
+static struct msm_gpiomux_config matissewifigl_irda_irq_cfg_64[] __initdata = {
+	MAKE_NC_CONFIG_INIT_SLEEP(64),
+};
+static struct msm_gpiomux_config matissewifigl_irda_irq_cfg_65[] __initdata = {
+	MAKE_NC_CONFIG_INIT_SLEEP(65),
+};
+#endif
+#endif
 
 #if defined(CONFIG_MACH_MATISSELTE_OPEN)
 static struct msm_gpiomux_config matisselte_open_nc_gpio_cfgs[] __initdata = {
@@ -121,7 +167,7 @@ static struct msm_gpiomux_config matisselte_open_nc_gpio_cfgs[] __initdata = {
 };
 #endif
 
-#if defined(CONFIG_MACH_MATISSELTE_VZW)
+#if defined(CONFIG_MACH_MATISSELTE_VZW) || defined(CONFIG_MACH_MATISSELTE_USC)
 static struct msm_gpiomux_config matisseltevzw_nc_gpio_cfgs[] __initdata = {
 	NC_GPIO_CONFIG(83),
 	NC_GPIO_CONFIG(85),
@@ -226,7 +272,7 @@ static struct gpiomux_setting synaptics_reset_sus_cfg = {
 };
 #endif
 
-#if defined (CONFIG_MACH_MATISSELTE_VZW)
+#if defined (CONFIG_MACH_MATISSELTE_VZW) || defined(CONFIG_MACH_MATISSELTE_USC)
 static struct gpiomux_setting gpio_keys_vzw_active = {
 	.func = GPIOMUX_FUNC_GPIO,
 	.drv = GPIOMUX_DRV_2MA,
@@ -310,6 +356,20 @@ static struct gpiomux_setting wcnss_5wire_active_cfg = {
 	.pull = GPIOMUX_PULL_DOWN,
 };
 
+#ifdef CONFIG_WCNSS_IRIS_REGISTER_DUMP
+static struct gpiomux_setting wcnss_5gpio_suspend_cfg = {
+        .func = GPIOMUX_FUNC_GPIO,
+        .drv  = GPIOMUX_DRV_2MA,
+        .pull = GPIOMUX_PULL_UP,
+};
+
+static struct gpiomux_setting wcnss_5gpio_active_cfg = {
+        .func = GPIOMUX_FUNC_GPIO,
+	.drv  = GPIOMUX_DRV_6MA,
+	.pull = GPIOMUX_PULL_DOWN,
+};
+#endif
+
 static struct gpiomux_setting gpio_i2c_config = {
 	.func = GPIOMUX_FUNC_3,
 	.drv = GPIOMUX_DRV_2MA,
@@ -388,7 +448,7 @@ static struct msm_gpiomux_config msm_keypad_configs[] __initdata = {
 	{
 		.gpio = 108,
 		.settings = {
-#if defined (CONFIG_MACH_MATISSELTE_VZW)
+#if defined (CONFIG_MACH_MATISSELTE_VZW) || defined(CONFIG_MACH_MATISSELTE_USC)
 			[GPIOMUX_ACTIVE]    = &gpio_keys_vzw_active,
 #else
 			[GPIOMUX_ACTIVE]    = &gpio_keys_active,
@@ -895,9 +955,17 @@ static struct msm_gpiomux_config sd_card_det __initdata = {
 	},
 };
 
-
 #if defined (CONFIG_SEC_MILLET_PROJECT) || defined(CONFIG_SEC_MATISSE_PROJECT)
 static struct msm_gpiomux_config msm_nativesensors_configs[] __initdata = {
+#ifdef CONFIG_SENSORS_GRIP_ADJDET
+	{
+		.gpio      = 22,		/* ADJ_DET IRQ */
+		.settings = {
+			[GPIOMUX_ACTIVE] = &grip_irq_config,
+			[GPIOMUX_SUSPENDED] = &grip_irq_config,
+		},
+	},
+#endif
 	{
 		.gpio      = 66,		/* GRIP IRQ */
 		.settings = {
@@ -917,10 +985,10 @@ static struct msm_gpiomux_config msm_nativesensors_configs[] __initdata = {
 
 #if defined(CONFIG_SEC_MATISSEWIFI_COMMON)
 
-static struct gpiomux_setting nfc_i2c_config = {
+static struct gpiomux_setting nfc_enable_config = {
 		.func = GPIOMUX_FUNC_GPIO,
 		.drv = GPIOMUX_DRV_2MA,
-		.pull = GPIOMUX_PULL_NONE,
+		.pull = GPIOMUX_PULL_DOWN,
 };
 
 static struct gpiomux_setting nfc_irq_cfg = {
@@ -948,8 +1016,8 @@ static struct msm_gpiomux_config msm_nfc_configs[] __initdata = {
 	{
 		.gpio = 0, /* NFC EN */
 		.settings = {
-			[GPIOMUX_ACTIVE] = &nfc_i2c_config,
-			[GPIOMUX_SUSPENDED] = &nfc_i2c_config,
+			[GPIOMUX_ACTIVE] = &nfc_enable_config,
+			[GPIOMUX_SUSPENDED] = &nfc_enable_config,
 		},
 	},
 	{
@@ -999,6 +1067,46 @@ static struct msm_gpiomux_config wcnss_5wire_interface[] = {
 		},
 	},
 };
+
+#ifdef CONFIG_WCNSS_IRIS_REGISTER_DUMP
+static struct msm_gpiomux_config wcnss_5gpio_interface[] = {
+	{
+		.gpio = 40,
+		.settings = {
+			[GPIOMUX_ACTIVE]    = &wcnss_5gpio_active_cfg,
+			[GPIOMUX_SUSPENDED] = &wcnss_5gpio_suspend_cfg,
+		},
+	},
+	{
+		.gpio = 41,
+		.settings = {
+			[GPIOMUX_ACTIVE]    = &wcnss_5gpio_active_cfg,
+			[GPIOMUX_SUSPENDED] = &wcnss_5gpio_suspend_cfg,
+		},
+	},
+	{
+		.gpio = 42,
+		.settings = {
+			[GPIOMUX_ACTIVE]    = &wcnss_5gpio_active_cfg,
+			[GPIOMUX_SUSPENDED] = &wcnss_5gpio_suspend_cfg,
+		},
+	},
+	{
+		.gpio = 43,
+		.settings = {
+			[GPIOMUX_ACTIVE]    = &wcnss_5gpio_active_cfg,
+			[GPIOMUX_SUSPENDED] = &wcnss_5gpio_suspend_cfg,
+		},
+	},
+	{
+		.gpio = 44,
+		.settings = {
+			[GPIOMUX_ACTIVE]    = &wcnss_5gpio_active_cfg,
+			[GPIOMUX_SUSPENDED] = &wcnss_5gpio_suspend_cfg,
+		},
+	},
+};
+#endif
 
 static struct gpiomux_setting gpio_suspend_config[] = {
 	{
@@ -1257,7 +1365,11 @@ static struct gpiomux_setting ovp_enable_cfg = {
 
 static struct msm_gpiomux_config ovp_enable_configs[] = {
   {
+     #if defined(CONFIG_MACH_MATISSELTE_VZW) || defined(CONFIG_MACH_MATISSELTE_USC) || defined (CONFIG_MACH_MATISSELTE_ATT)
+     .gpio = 104,              /* OVP enable */
+     #else
      .gpio = 64,              /* OVP enable */
+     #endif
      .settings = {
       [GPIOMUX_ACTIVE] = &ovp_enable_cfg,
       [GPIOMUX_SUSPENDED] = &ovp_enable_cfg,
@@ -1444,7 +1556,7 @@ static void msm_gpiomux_sdc3_install(void)
 static void msm_gpiomux_sdc3_install(void) {}
 #endif /* CONFIG_MMC_MSM_SDC3_SUPPORT */
 
-#if defined(CONFIG_MACH_MATISSELTE_VZW)
+#if defined(CONFIG_SEC_MATISSE_PROJECT)
 static struct gpiomux_setting gpio_10_sda_config = {
 	.func = GPIOMUX_FUNC_GPIO,
 	.drv = GPIOMUX_DRV_2MA,
@@ -1457,8 +1569,37 @@ static struct msm_gpiomux_config msm_sda_configs[] = {
 		.settings = {
 			[GPIOMUX_ACTIVE]    = &gpio_10_sda_config,
 			[GPIOMUX_SUSPENDED] = &gpio_10_sda_config,
-		},	
+		},
 	},
+};
+#endif
+
+#ifdef CONFIG_IR_REMOCON_MC96FR116
+static struct gpiomux_setting irled_gpio_i2c_config = {
+	.func = GPIOMUX_FUNC_GPIO,
+	.drv = GPIOMUX_DRV_2MA,
+	.pull = GPIOMUX_PULL_NONE,
+	.dir = GPIOMUX_IN,
+};
+static struct msm_gpiomux_config irled_i2c_scl_config[] __initdata = {
+	{
+		.gpio      = 4,
+		.settings = {
+			[GPIOMUX_ACTIVE] = &irled_gpio_i2c_config,
+			[GPIOMUX_SUSPENDED] = &irled_gpio_i2c_config,
+		},
+	},
+#ifdef CONFIG_MACH_MATISSELTE_USC
+	NC_GPIO_CONFIG(5),	// For IN-PD-2MA config. This PIN isn't NC
+#else
+	{
+		.gpio      = 5,
+		.settings = {
+			[GPIOMUX_ACTIVE] = &irled_gpio_i2c_config,
+			[GPIOMUX_SUSPENDED] = &irled_gpio_i2c_config,
+		},
+	},
+#endif
 };
 #endif
 
@@ -1474,7 +1615,7 @@ void __init msm8226_init_gpiomux(void)
 		return;
 	}
 
-#if defined(CONFIG_MACH_MATISSELTE_VZW)
+#if defined(CONFIG_SEC_MATISSE_PROJECT)
 	msm_gpiomux_install(msm_sda_configs, ARRAY_SIZE(msm_sda_configs));
 #endif
 
@@ -1492,7 +1633,7 @@ void __init msm8226_init_gpiomux(void)
 			ARRAY_SIZE(msm_blsp_configs));
 
 	msm_gpiomux_install(wcnss_5wire_interface,
-				ARRAY_SIZE(wcnss_5wire_interface));
+			ARRAY_SIZE(wcnss_5wire_interface));
 
 	msm_gpiomux_install(&sd_card_det, 1);
 	if (of_board_is_skuf())
@@ -1522,13 +1663,15 @@ void __init msm8226_init_gpiomux(void)
 		msm_gpiomux_install(msm_sensor_configs_skuf_plus,
 			ARRAY_SIZE(msm_sensor_configs_skuf_plus));
 
-  msm_gpiomux_install(msm_ta_nchg_configs, ARRAY_SIZE(msm_ta_nchg_configs));
-  msm_gpiomux_install(msm_ta_int_n_configs, ARRAY_SIZE(msm_ta_int_n_configs));
-  if(system_rev > 1)
-     msm_gpiomux_install(ovp_enable_configs, ARRAY_SIZE(ovp_enable_configs));
-  msm_gpiomux_install(msm_hall_configs,
-      ARRAY_SIZE(msm_hall_configs));
-  if (of_board_is_cdp() || of_board_is_mtp() || of_board_is_xpm())
+	msm_gpiomux_install(msm_ta_nchg_configs, ARRAY_SIZE(msm_ta_nchg_configs));
+	msm_gpiomux_install(msm_ta_int_n_configs, ARRAY_SIZE(msm_ta_int_n_configs));
+
+	if(system_rev > 1)
+		msm_gpiomux_install(ovp_enable_configs, ARRAY_SIZE(ovp_enable_configs));
+
+	msm_gpiomux_install(msm_hall_configs, ARRAY_SIZE(msm_hall_configs));
+
+	if (of_board_is_cdp() || of_board_is_mtp() || of_board_is_xpm())
 		msm_gpiomux_install(usb_otg_sw_configs,
 					ARRAY_SIZE(usb_otg_sw_configs));
 #if defined(CONFIG_SEC_MATISSE_PROJECT)
@@ -1559,32 +1702,154 @@ void __init msm8226_init_gpiomux(void)
 	msm_gpiomux_install(msm_spk_en_gpio_configs, ARRAY_SIZE(msm_spk_en_gpio_configs));
 #ifdef CONFIG_SND_SOC_MAX98504
 #if defined(CONFIG_MACH_MILLETLTE_OPEN)
-				if ( system_rev >= 0 && system_rev < 3)
+	if ( system_rev >= 0 && system_rev < 3)
 #elif defined (CONFIG_MACH_MILLET3G_EUR)
-				if ( system_rev >= 2 && system_rev < 4)
+	if ( system_rev >= 2 && system_rev < 4)
 #elif defined(CONFIG_MACH_MILLETWIFI_OPEN)
-				if ( system_rev >= 0 && system_rev < 5)
+	if ( system_rev >= 0 && system_rev < 5)
 #endif
-
-		{
-			msm_gpiomux_install(msm8226_tertiary_mi2s_configs,ARRAY_SIZE(msm8226_tertiary_mi2s_configs));
-			msm_gpiomux_install(msm8226_blsp_codec_configs,ARRAY_SIZE(msm8226_blsp_codec_configs));
-		}
+	{
+		msm_gpiomux_install(msm8226_tertiary_mi2s_configs,ARRAY_SIZE(msm8226_tertiary_mi2s_configs));
+		msm_gpiomux_install(msm8226_blsp_codec_configs,ARRAY_SIZE(msm8226_blsp_codec_configs));
+	}
 #endif
 /* Install NC Configurations */
 #if defined(CONFIG_MACH_MATISSEWIFI_OPEN)
 	msm_gpiomux_install(matissewifi_open_nc_gpio_cfgs, ARRAY_SIZE(matissewifi_open_nc_gpio_cfgs));
+#endif
+#if defined(CONFIG_MACH_MATISSEWIFIUS_OPEN)
+	msm_gpiomux_install(matissewifiue_open_nc_gpio_cfgs, ARRAY_SIZE(matissewifiue_open_nc_gpio_cfgs));
+	if (system_rev >= 5)
+		msm_gpiomux_install(matissewifiue_open_nc_gpio_rev5_cfgs, ARRAY_SIZE(matissewifiue_open_nc_gpio_rev5_cfgs));
+#if defined(CONFIG_MACH_MATISSEWIFIUS_GOOGLE)
+	if (system_rev < 2)
+		msm_gpiomux_install(matissewifigl_irda_irq_cfg_64, ARRAY_SIZE(matissewifigl_irda_irq_cfg_64));
+	else
+		msm_gpiomux_install(matissewifigl_irda_irq_cfg_65, ARRAY_SIZE(matissewifigl_irda_irq_cfg_65));
+#endif
 #endif
 
 #if defined(CONFIG_MACH_MATISSELTE_OPEN)
 	msm_gpiomux_install(matisselte_open_nc_gpio_cfgs, ARRAY_SIZE(matisselte_open_nc_gpio_cfgs));
 #endif
 
-#if defined (CONFIG_MACH_MATISSELTE_VZW)
+#if defined (CONFIG_MACH_MATISSELTE_VZW) || defined(CONFIG_MACH_MATISSELTE_USC)
 	msm_gpiomux_install(matisseltevzw_nc_gpio_cfgs, ARRAY_SIZE(matisseltevzw_nc_gpio_cfgs));
 #endif
 
 #if defined (CONFIG_MACH_MATISSE3G_OPEN)
 	msm_gpiomux_install(matisse3g_nc_gpio_cfgs, ARRAY_SIZE(matisse3g_nc_gpio_cfgs));
 #endif
+
+#ifdef CONFIG_IR_REMOCON_MC96FR116
+	msm_gpiomux_install(irled_i2c_scl_config, ARRAY_SIZE(irled_i2c_scl_config));
+#endif
 }
+
+#ifdef CONFIG_WCNSS_IRIS_REGISTER_DUMP
+static void wcnss_switch_to_gpio(void)
+{
+	/* Switch MUX to GPIO */
+	msm_gpiomux_install(wcnss_5gpio_interface,
+			ARRAY_SIZE(wcnss_5gpio_interface));
+
+	/* Ensure GPIO config */
+	gpio_direction_input(WLAN_DATA2);
+	gpio_direction_input(WLAN_DATA1);
+	gpio_direction_input(WLAN_DATA0);
+	gpio_direction_output(WLAN_SET, 0);
+	gpio_direction_output(WLAN_CLK, 0);
+}
+
+static void wcnss_switch_to_5wire(void)
+{
+	msm_gpiomux_install(wcnss_5wire_interface,
+			ARRAY_SIZE(wcnss_5wire_interface));
+}
+
+u32 wcnss_rf_read_reg(u32 rf_reg_addr)
+{
+	int count = 0;
+	u32 rf_cmd_and_addr = 0;
+	u32 rf_data_received = 0;
+	u32 rf_bit = 0;
+
+	wcnss_switch_to_gpio();
+
+	/* Reset the signal if it is already being used. */
+	gpio_set_value(WLAN_SET, 0);
+	gpio_set_value(WLAN_CLK, 0);
+
+	/* We start with cmd_set high WLAN_SET = 1. */
+	gpio_set_value(WLAN_SET, 1);
+
+	gpio_direction_output(WLAN_DATA0, 1);
+	gpio_direction_output(WLAN_DATA1, 1);
+	gpio_direction_output(WLAN_DATA2, 1);
+
+	gpio_set_value(WLAN_DATA0, 0);
+	gpio_set_value(WLAN_DATA1, 0);
+	gpio_set_value(WLAN_DATA2, 0);
+
+	/* Prepare command and RF register address that need to sent out.
+	 * Make sure that we send only 14 bits from LSB.
+	 */
+	rf_cmd_and_addr  = (((WLAN_RF_READ_REG_CMD) |
+		(rf_reg_addr << WLAN_RF_REG_ADDR_START_OFFSET)) &
+		WLAN_RF_READ_CMD_MASK);
+
+	for (count = 0; count < 5; count++) {
+		gpio_set_value(WLAN_CLK, 0);
+
+		rf_bit = (rf_cmd_and_addr & 0x1);
+		gpio_set_value(WLAN_DATA0, rf_bit ? 1 : 0);
+		rf_cmd_and_addr = (rf_cmd_and_addr >> 1);
+
+		rf_bit = (rf_cmd_and_addr & 0x1);
+		gpio_set_value(WLAN_DATA1, rf_bit ? 1 : 0);
+		rf_cmd_and_addr = (rf_cmd_and_addr >> 1);
+
+		rf_bit = (rf_cmd_and_addr & 0x1);
+		gpio_set_value(WLAN_DATA2, rf_bit ? 1 : 0);
+		rf_cmd_and_addr = (rf_cmd_and_addr >> 1);
+
+		/* Send the data out WLAN_CLK = 1 */
+		gpio_set_value(WLAN_CLK, 1);
+	}
+
+	/* Pull down the clock signal */
+	gpio_set_value(WLAN_CLK, 0);
+
+	/* Configure data pins to input IO pins */
+	gpio_direction_input(WLAN_DATA0);
+	gpio_direction_input(WLAN_DATA1);
+	gpio_direction_input(WLAN_DATA2);
+
+	for (count = 0; count < 2; count++) {
+		gpio_set_value(WLAN_CLK, 1);
+		gpio_set_value(WLAN_CLK, 0);
+	}
+
+	rf_bit = 0;
+	for (count = 0; count < 6; count++) {
+		gpio_set_value(WLAN_CLK, 1);
+		gpio_set_value(WLAN_CLK, 0);
+
+		rf_bit = gpio_get_value(WLAN_DATA0);
+		rf_data_received |= (rf_bit << (count * 3 + 0));
+
+		if (count != 5) {
+			rf_bit = gpio_get_value(WLAN_DATA1);
+			rf_data_received |= (rf_bit << (count * 3 + 1));
+
+			rf_bit = gpio_get_value(WLAN_DATA2);
+			rf_data_received |= (rf_bit << (count * 3 + 2));
+		}
+	}
+
+	gpio_set_value(WLAN_SET, 0);
+	wcnss_switch_to_5wire();
+
+	return rf_data_received;
+}
+#endif

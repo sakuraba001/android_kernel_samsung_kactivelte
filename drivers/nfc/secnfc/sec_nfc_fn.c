@@ -234,6 +234,7 @@ static int sec_nfc_fn_probe(struct platform_device *pdev)
     if (check_custom_kernel() == 1)
     {
         pr_info("%s: The kernel is tampered. Couldn't initialize NFC. \n", __func__);
+        //return -EPERM;
     }
 
 	if(dev) {
@@ -256,7 +257,6 @@ static int sec_nfc_fn_probe(struct platform_device *pdev)
 	if (!info) {
 		dev_err(dev, "failed to allocate memory for sec_nfc_fn_info\n");
 		ret = -ENOMEM;
-		kfree(pdata);
 		goto err_info_alloc;
 	}
 	info->dev = dev;
