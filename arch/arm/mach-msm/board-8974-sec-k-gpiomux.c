@@ -63,7 +63,6 @@ static struct gpiomux_setting gpio_suspend_config[] = {
 	}
 
 static struct msm_gpiomux_config gpio_nc_configs[] __initdata = {
-#if !defined(CONFIG_MACH_KACTIVELTE_DCM)
 #if !defined(CONFIG_TDMB) && !defined(CONFIG_TDMB_MODULE)
 #if defined(CONFIG_MACH_KLTE_JPN)
 	GPIOMUX_SET_NC(73),
@@ -105,30 +104,6 @@ static struct msm_gpiomux_config gpio_nc_configs[] __initdata = {
 	GPIOMUX_SET_NC(124),
 	GPIOMUX_SET_NC(125),
 	GPIOMUX_SET_NC(136),
-#endif
-#else
-	GPIOMUX_SET_NC(9),
-	GPIOMUX_SET_NC(18),
-	GPIOMUX_SET_NC(57),
-	GPIOMUX_SET_NC(64),
-	GPIOMUX_SET_NC(69),
-	GPIOMUX_SET_NC(85),
-	GPIOMUX_SET_NC(86),
-	GPIOMUX_SET_NC(105),
-	GPIOMUX_SET_NC(110),
-	GPIOMUX_SET_NC(111),
-	GPIOMUX_SET_NC(112),
-	GPIOMUX_SET_NC(113),
-	GPIOMUX_SET_NC(114),
-	GPIOMUX_SET_NC(115),
-	GPIOMUX_SET_NC(116),
-	GPIOMUX_SET_NC(118),
-	GPIOMUX_SET_NC(119),
-	GPIOMUX_SET_NC(127),
-	GPIOMUX_SET_NC(130),
-	GPIOMUX_SET_NC(135),
-	GPIOMUX_SET_NC(136),
-	GPIOMUX_SET_NC(137), 
 #endif
 };
 
@@ -209,30 +184,6 @@ static struct msm_gpiomux_config gpio_rev08_nc_configs[] __initdata = {
 	GPIOMUX_SET_NC(116),
 	GPIOMUX_SET_NC(127),
 	GPIOMUX_SET_NC(135), // REV 06
-#endif
-#if defined(CONFIG_MACH_KACTIVELTE_DCM)
-	GPIOMUX_SET_NC(9),
-	GPIOMUX_SET_NC(18),
-	GPIOMUX_SET_NC(57),
-	GPIOMUX_SET_NC(64),
-	GPIOMUX_SET_NC(69),
-	GPIOMUX_SET_NC(85),
-	GPIOMUX_SET_NC(86),
-	GPIOMUX_SET_NC(105),
-	GPIOMUX_SET_NC(110),
-	GPIOMUX_SET_NC(111),
-	GPIOMUX_SET_NC(112),
-	GPIOMUX_SET_NC(113),
-	GPIOMUX_SET_NC(114),
-	GPIOMUX_SET_NC(115),
-	GPIOMUX_SET_NC(116),
-	GPIOMUX_SET_NC(118),
-	GPIOMUX_SET_NC(119),
-	GPIOMUX_SET_NC(127),
-	GPIOMUX_SET_NC(130),
-	GPIOMUX_SET_NC(135),
-	GPIOMUX_SET_NC(136),
-	GPIOMUX_SET_NC(137), 
 #endif
 };
 
@@ -850,8 +801,7 @@ static struct msm_gpiomux_config msm_epm_configs[] __initdata = {
 };
 
 static struct msm_gpiomux_config msm_blsp_configs[] __initdata = {
-#if defined(CONFIG_MACH_KLTE_DCM) || defined(CONFIG_MACH_KLTE_KDI) || defined(CONFIG_MACH_KLTE_SBM) \
-	|| defined(CONFIG_MACH_KACTIVELTE_DCM)
+#if defined(CONFIG_MACH_KLTE_DCM) || defined(CONFIG_MACH_KLTE_KDI) || defined(CONFIG_MACH_KLTE_SBM) 
         {
                 .gpio      = 2,         /* BLSP1 QUP*/
                 .settings = {
@@ -1238,7 +1188,7 @@ static struct msm_gpiomux_config sd_card_det __initdata = {
 static struct msm_gpiomux_config msm_sensor_configs[] __initdata = {
 	{
 		.gpio = 15, /* CAM_MCLK0 */
-#if !defined(CONFIG_MACH_KLTE_CHN) && !defined(CONFIG_MACH_K3GDUOS_CTC)&& !defined(CONFIG_MACH_KACTIVELTE_DCM)
+#if !defined(CONFIG_MACH_KLTE_CHN) && !defined(CONFIG_MACH_K3GDUOS_CTC)
 		.settings = {
 			[GPIOMUX_ACTIVE]    = &cam_settings[0],
 			[GPIOMUX_SUSPENDED] = &gpio_suspend_config[3],

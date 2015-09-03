@@ -214,7 +214,8 @@ static sec_bat_adc_table_data_t temp_table[] = {
 	{42030,	-250},
 	{42327,	-300},
 };
-#elif defined(CONFIG_MACH_KACTIVELTE_EUR) || defined(CONFIG_MACH_KACTIVELTE_ATT) || defined(CONFIG_MACH_KACTIVELTE_CAN) || defined(CONFIG_MACH_KACTIVELTE_SKT)
+#elif defined(CONFIG_MACH_KACTIVELTE_EUR) || defined(CONFIG_MACH_KACTIVELTE_ATT) || defined(CONFIG_MACH_KACTIVELTE_CAN) || defined(CONFIG_MACH_KACTIVELTE_SKT) \
+	|| defined(CONFIG_MACH_KACTIVELTE_DCM)
 static sec_bat_adc_table_data_t temp_table[] = {
 	{26009,	900},
 	{26280,	850},
@@ -239,32 +240,6 @@ static sec_bat_adc_table_data_t temp_table[] = {
 	{40002,	-50},
 	{41724,	-200},
 	{42373,	-300},
-};
-#elif defined(CONFIG_MACH_KACTIVELTE_DCM)
-static sec_bat_adc_table_data_t temp_table[] = {
-	{25844,	900},
-	{26113,	850},
-	{26319,	800},
-	{26614,	750},
-	{26952,	700},
-	{27381,	650},
-	{27882,	600},
-	{28460,	550},
-	{29138,	500},
-	{29919,	450},
-	{30798,	400},
-	{31774,	350},
-	{32835,	300},
-	{33950,	250},
-	{35094,	200},
-	{36237,	150},
-	{37339,	100},
-	{38362,	50},
-	{39257,	0},
-	{40085,	-50},
-	{40765,	-100},
-	{41319,	-150},
-	{41773,	-200},
 };
 #elif defined(CONFIG_SEC_KSPORTS_PROJECT)
 static sec_bat_adc_table_data_t temp_table[] = {
@@ -1025,19 +1000,6 @@ static sec_bat_adc_table_data_t temp_table[] = {
 #define TEMP_HIGH_THRESHOLD_LPM		600
 #define TEMP_HIGH_RECOVERY_LPM		460
 #define TEMP_LOW_THRESHOLD_LPM		-50
-#define TEMP_LOW_RECOVERY_LPM		0
-#elif defined(CONFIG_SEC_KACTIVE_PROJECT)
-#define TEMP_HIGH_THRESHOLD_EVENT	650
-#define TEMP_HIGH_RECOVERY_EVENT		440
-#define TEMP_LOW_THRESHOLD_EVENT		-45
-#define TEMP_LOW_RECOVERY_EVENT		0
-#define TEMP_HIGH_THRESHOLD_NORMAL	650
-#define TEMP_HIGH_RECOVERY_NORMAL	440
-#define TEMP_LOW_THRESHOLD_NORMAL	-45
-#define TEMP_LOW_RECOVERY_NORMAL	0
-#define TEMP_HIGH_THRESHOLD_LPM		650
-#define TEMP_HIGH_RECOVERY_LPM		440
-#define TEMP_LOW_THRESHOLD_LPM		-45
 #define TEMP_LOW_RECOVERY_LPM		0
 #elif defined(CONFIG_MACH_VIENNAVZW)
 #define TEMP_HIGH_THRESHOLD_EVENT	590

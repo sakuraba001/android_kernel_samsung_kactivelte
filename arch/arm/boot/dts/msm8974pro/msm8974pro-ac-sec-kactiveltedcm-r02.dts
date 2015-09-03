@@ -14,16 +14,16 @@
 
 /include/ "msm8974pro-sec.dtsi"
 /include/ "msm8974pro-max77804k-k.dtsi"
-/include/ "msm8974pro-ac-sec-kactiveltedcm-r14.dtsi"
+/include/ "msm8974pro-ac-sec-kactiveltedcm-r02.dtsi"
 /include/ "msm8974pro-isdb-klte-r00.dtsi"
 
 / {
-	model = "SAMSUNG K PROJECT REV14";
+	model = "Samsung KACTIVE rev0.2";
 	compatible = "qcom,msm8974-mtp", "qcom,msm8974", "qcom,mtp";
 	/*QCOM BOARD REV TYPE...*/
 	/*qcom,msm-id = <194 8 0x10000>;*/
 	/*SEC BOARD REV TYPE...*/
-        qcom,msm-id = <0xC2085101 14 0x10000>;
+        qcom,msm-id = <0xC2085101 2 0x10000>;
         /* [31:24] chip-id, [23:16] platform-id, [15:8] national code, [7:0] operator revision, reserved */
 };
 
@@ -38,7 +38,7 @@
 		qcom,hw-settle-time = <0>;
 		qcom,fast-avg-setup = <0>;
 	};
-
+	
 	chan@73 {
 		label = "msm_therm";
 		reg = <0x73>;

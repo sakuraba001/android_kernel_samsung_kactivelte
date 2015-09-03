@@ -1,4 +1,4 @@
-/* 
+/*
  * Copyright (c)2013 Maxim Integrated Products, Inc.
  *
  * This software is licensed under the terms of the GNU General Public
@@ -125,12 +125,11 @@ static int max86900_regulator_onoff(struct max86900_device_data *data, int onoff
 		pr_err("%s - regulator_get fail\n", __func__);
 		goto err_1p8;
 	}
-
-#if defined(CONFIG_SEC_KACTIVE_PROJECT) || defined(CONFIG_MACH_KSPORTSLTE_SPR)
+#if defined(CONFIG_SEC_S_PROJECT)
 	data->vdd_3p3 = regulator_get(NULL, data->led_l19);
 	if (IS_ERR(data->vdd_3p3)) {
 		pr_err("%s - regulator_get fail\n", __func__);
-		goto err_3p3;
+		goto err_1p8;
 	}
 #endif
 	pr_info("%s - onoff = %d\n", __func__, onoff);
@@ -138,26 +137,21 @@ static int max86900_regulator_onoff(struct max86900_device_data *data, int onoff
 	if (onoff == HRM_LDO_ON) {
 		regulator_set_voltage(data->vdd_1p8, 1800000, 1800000);
 		regulator_enable(data->vdd_1p8);
-#if defined(CONFIG_SEC_KACTIVE_PROJECT) || defined(CONFIG_MACH_KSPORTSLTE_SPR)
+#if defined(CONFIG_SEC_S_PROJECT)
 		regulator_set_voltage(data->vdd_3p3, 3300000, 3300000);
 		regulator_enable(data->vdd_3p3);
 #endif
 	} else {
 		regulator_disable(data->vdd_1p8);
-#if defined(CONFIG_SEC_KACTIVE_PROJECT) || defined(CONFIG_MACH_KSPORTSLTE_SPR)
+#if defined(CONFIG_SEC_S_PROJECT)
 		regulator_disable(data->vdd_3p3);
 #endif
 	}
-
 	regulator_put(data->vdd_1p8);
-#if defined(CONFIG_SEC_KACTIVE_PROJECT) || defined(CONFIG_MACH_KSPORTSLTE_SPR)
+#if defined(CONFIG_SEC_S_PROJECT)
 	regulator_put(data->vdd_3p3);
 #endif
 	return 0;
-#if defined(CONFIG_SEC_KACTIVE_PROJECT) || defined(CONFIG_MACH_KSPORTSLTE_SPR)
-err_3p3:
-	regulator_put(data->vdd_1p8);
-#endif
 err_1p8:
 	return -ENODEV;
 }
@@ -1116,7 +1110,7 @@ static int max86900_parse_dt(struct max86900_device_data *data,
 
 	if (of_property_read_string(dNode, "max86900,sub_ldo4", &data->sub_ldo4) < 0)
 		pr_err("%s - get sub_ldo4 error\n", __func__);
-#if defined(CONFIG_SEC_KACTIVE_PROJECT) || defined(CONFIG_MACH_KSPORTSLTE_SPR)
+#if defined(CONFIG_SEC_KACTIVE_PROJECT) || defined(CONFIG_MACH_KSPORTSLTE_SPR) || defined(CONFIG_SEC_S_PROJECT)
 	if (of_property_read_string(dNode, "max86900,led_l19", &data->led_l19) < 0)
 		pr_err("%s - get led_l19 error\n", __func__);
 #endif

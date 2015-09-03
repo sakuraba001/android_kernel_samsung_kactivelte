@@ -431,7 +431,7 @@ static struct sec_therm_adc_table temper_table_ap[] = {
 	{28955,	 530},
 	{29058,	 520},
 	{29161,	 510},
-	{28182,	 500},
+	{29290,	 500},
 	{29410,	 490},
 	{29555,	 480},
 	{29700,	 470},
@@ -563,7 +563,13 @@ static struct sec_therm_platform_data sec_therm_pdata = {
 	.adc_table	= temper_table_ap,
 	.polling_interval = 30 * 1000, /* msecs */
 	.get_siop_level = get_msm8974_siop_level,
-#if defined(CONFIG_MACH_HLTEDCM) || defined(CONFIG_MACH_HLTEKDI) || defined(CONFIG_MACH_JS01LTEDCM) || defined(CONFIG_MACH_KLTE_JPN)
+#if defined(CONFIG_MACH_HLTEDCM) || defined(CONFIG_MACH_HLTEKDI) || \
+	defined(CONFIG_MACH_JS01LTEDCM) || defined(CONFIG_MACH_KLTE_JPN) || \
+	defined(CONFIG_MACH_KACTIVELTE_DCM)
+	#if defined(CONFIG_MACH_HLTEDCM) || defined(CONFIG_MACH_HLTEKDI)
+	.adc_flash_arr_size = ARRAY_SIZE(temper_table_flash),
+	.adc_table_flash = temper_table_flash,
+	#endif
 	.no_polling	= 0,
 #else
 	.no_polling	= 1,
