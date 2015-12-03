@@ -1147,6 +1147,8 @@ static struct sock *sk_prot_alloc(struct proto *prot, gfp_t priority,
 			goto out_free_sec;
 		sk_tx_queue_clear(sk);
 	}
+	sk->knox_uid = current->cred->uid;
+	sk->knox_pid = current->tgid;
 
 	return sk;
 
