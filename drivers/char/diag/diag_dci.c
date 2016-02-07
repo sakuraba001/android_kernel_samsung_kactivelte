@@ -1289,15 +1289,12 @@ static int diag_process_dci_pkt_rsp(unsigned char *buf, int len)
 				 * registered on the Apps Processor
 				 */
 				if (entry.cmd_code_lo == MODE_CMD &&
-				    entry.cmd_code_hi == MODE_CMD &&
-				    header->subsys_id == RESET_ID) {
+				    entry.cmd_code_hi == MODE_CMD)
 					if (entry.client_id != APPS_DATA)
 						continue;
-				}
-
-				ret = diag_send_dci_pkt(entry, buf, len,
+					ret = diag_send_dci_pkt(entry, buf, len,
 								req_entry->tag);
-				found = 1;
+					found = 1;
 			}
 		}
 	}

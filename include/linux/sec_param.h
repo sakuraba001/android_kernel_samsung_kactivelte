@@ -28,8 +28,8 @@ struct sec_param_data {
 #endif
 #ifdef CONFIG_SEC_MONITOR_BATTERY_REMOVAL
 	unsigned int normal_poweroff;
+	unsigned int enable_diag;
 #endif
-	unsigned int reserved0;
 } ;
 
 enum sec_param_index {
@@ -53,7 +53,7 @@ enum sec_param_index {
 #ifdef CONFIG_SEC_MONITOR_BATTERY_REMOVAL
 	param_index_normal_poweroff,
 #endif
-	param_index_reserved0,
+	param_index_enable_diag,
 } ;
 
 extern bool sec_open_param(void);

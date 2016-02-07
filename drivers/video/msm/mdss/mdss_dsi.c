@@ -1740,8 +1740,7 @@ static int __devinit mdss_dsi_ctrl_probe(struct platform_device *pdev)
 	}
 #if !defined(CONFIG_FB_MSM8x26_MDSS_CHECK_LCD_CONNECTION) && \
 	!defined(CONFIG_FB_MSM_MIPI_SAMSUNG_TFT_VIDEO_WQXGA_PT_PANEL) && \
-	!defined(CONFIG_FB_MSM_MIPI_MAGNA_OCTA_VIDEO_WXGA_PT_DUAL_PANEL) && \
-	!defined(CONFIG_FB_MSM_MIPI_SAMSUNG_OCTA_CMD_WQHD_PT_PANEL)
+	!defined(CONFIG_FB_MSM_MIPI_MAGNA_OCTA_VIDEO_WXGA_PT_DUAL_PANEL)
 	if (get_lcd_attached() == 0) {
 		pr_err("%s : lcd is not attached..\n",__func__);
 		return -ENODEV;

@@ -4984,10 +4984,9 @@ static void synaptics_get_firmware_name(struct synaptics_rmi4_data *rmi4_data)
 				}
 			} else if (rmi4_data->ic_revision_of_ic == SYNAPTICS_IC_REVISION_A3) {
 				if (strncmp(rmi4_data->dt_data->sub_project, "0", 1) != 0) {
-					if ((strncmp(rmi4_data->dt_data->sub_project, "active", 6) == 0))
-							rmi4_data->firmware_name = FW_IMAGE_NAME_S5100_K_ACTIVE;					
-					else if(strncmp(rmi4_data->dt_data->sub_project, "sports", 6) == 0)
-							rmi4_data->firmware_name = FW_IMAGE_NAME_S5100_K_SPORTS;
+					if ((strncmp(rmi4_data->dt_data->sub_project, "active", 6) == 0) ||
+						(strncmp(rmi4_data->dt_data->sub_project, "sports", 6) == 0))
+						rmi4_data->firmware_name = FW_IMAGE_NAME_S5100_K_ACTIVE;
 					else
 						rmi4_data->firmware_name = FW_IMAGE_NAME_NONE;
 				} else {
