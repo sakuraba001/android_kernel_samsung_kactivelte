@@ -352,3 +352,11 @@ config EN_OOPS
 	default n
 	help
 	  Say Y to enable oops filter
+
+# OTG
+
+config CONTROL_OTG_POPUP
+	bool "OTG Popup control for waterproof models"
+	default n
+	help
+	  Say Y here to enable support for OTG Popup control

@@ -69,19 +69,25 @@ static struct msm_gpiomux_config gpio_nc_configs[] __initdata = {
 	GPIOMUX_SET_NC(25),
 	GPIOMUX_SET_NC(26),
 #endif
+#if !defined(CONFIG_MACH_KACTIVELTE_KOR)
 	GPIOMUX_SET_NC(41),
+#endif
 #if !defined(CONFIG_MACH_KACTIVELTE_DCM)
+#if !defined(CONFIG_MACH_KACTIVELTE_KOR)
 	GPIOMUX_SET_NC(42),
-	GPIOMUX_SET_NC(49),
-	GPIOMUX_SET_NC(50),
 	GPIOMUX_SET_NC(51),
 	GPIOMUX_SET_NC(52),
+#endif
+	GPIOMUX_SET_NC(49),
+	GPIOMUX_SET_NC(50),
 #endif
 	GPIOMUX_SET_NC(57),
 #if !defined(CONFIG_MACH_KACTIVELTE_DCM)
 	GPIOMUX_SET_NC(63),
 #endif
+#if !defined(CONFIG_MACH_KACTIVELTE_KOR)
 	GPIOMUX_SET_NC(64),
+#endif
 	GPIOMUX_SET_NC(69),
 #if !defined(CONFIG_MACH_KACTIVELTE_DCM)
 	GPIOMUX_SET_NC(73),
@@ -95,6 +101,14 @@ static struct msm_gpiomux_config gpio_nc_configs[] __initdata = {
 	GPIOMUX_SET_NC(123),
 	GPIOMUX_SET_NC(126),
 	GPIOMUX_SET_NC(127),
+#endif
+#if defined(CONFIG_MACH_KACTIVELTE_KOR)
+	GPIOMUX_SET_NC(101),
+	GPIOMUX_SET_NC(118),
+	GPIOMUX_SET_NC(123),
+	GPIOMUX_SET_NC(127),
+	GPIOMUX_SET_NC(136),
+	GPIOMUX_SET_NC(145),
 #endif
 	GPIOMUX_SET_NC(105),
 	GPIOMUX_SET_NC(111),
@@ -487,6 +501,7 @@ static struct msm_gpiomux_config msm_hsic_hub_configs[] = {
 	},
 };
 #endif
+#if !defined(CONFIG_MACH_KACTIVELTE_KOR)
 #ifdef CONFIG_VIDEO_MHL_V2
 static struct gpiomux_setting mhl_active_cfg = {
 	.func = GPIOMUX_FUNC_3,
@@ -643,7 +658,7 @@ static struct msm_gpiomux_config mhl_configs[] __initdata = {
 	},
 };
 #endif
-
+#endif
 #if !defined(CONFIG_BT_BCM4354)
 static struct gpiomux_setting gpio_uart7_active_cfg = {
 	.func = GPIOMUX_FUNC_3,
@@ -953,12 +968,22 @@ static struct msm_gpiomux_config es705_config[] __initdata = {
 			[GPIOMUX_SUSPENDED] = &gpio_uart_config,
 		},
 	},
+#if defined(CONFIG_MACH_KACTIVELTE_KOR)
+	{
+		.gpio	= 64,		/* es705 2mic int */
+		.settings = {
+			[GPIOMUX_SUSPENDED] = &es705_intrevent_config,
+		},
+	},
+
+#else
 	{
 		.gpio	= 76,		/* es705 2mic int */
 		.settings = {
 			[GPIOMUX_SUSPENDED] = &es705_intrevent_config,
 		},
 	},
+#endif
 	{
 		.gpio	= 79,		/* es705 intr event */
 		.settings = {
@@ -1268,7 +1293,7 @@ static struct msm_gpiomux_config msm8974_pri_pri_auxpcm_configs[] __initdata = {
 
 /* Primary AUXPCM port sharing GPIO lines with Tertiary MI2S */
 static struct msm_gpiomux_config msm8974_pri_ter_auxpcm_configs[] __initdata = {
-#if !defined(CONFIG_SENSORS_SSP)
+#if !defined(CONFIG_SENSORS_SSP) && !defined(CONFIG_TERT_MI2S_ENABLE)
 	{
 		.gpio = 74,
 		.settings = {
@@ -1277,6 +1302,7 @@ static struct msm_gpiomux_config msm8974_pri_ter_auxpcm_configs[] __initdata = {
 		},
 	},
 #endif
+#if !defined(CONFIG_TERT_MI2S_ENABLE)
 	{
 		.gpio = 75,
 		.settings = {
@@ -1284,7 +1310,8 @@ static struct msm_gpiomux_config msm8974_pri_ter_auxpcm_configs[] __initdata = {
 			[GPIOMUX_ACTIVE] = &auxpcm_act_cfg,
 		},
 	},
-#if !defined(CONFIG_SND_SOC_ES705)
+#endif
+#if !defined(CONFIG_SND_SOC_ES705) && !defined(CONFIG_TERT_MI2S_ENABLE)
 	{
 		.gpio = 76,
 		.settings = {
@@ -1293,7 +1320,7 @@ static struct msm_gpiomux_config msm8974_pri_ter_auxpcm_configs[] __initdata = {
 		},
 	},
 #endif
-#if !defined(CONFIG_SAMSUNG_JACK)
+#if !defined(CONFIG_SAMSUNG_JACK) && !defined(CONFIG_TERT_MI2S_ENABLE)
 	{
 		.gpio = 77,
 		.settings = {
@@ -1481,6 +1508,7 @@ static struct msm_gpiomux_config ssp_configs[] __initdata = {
 			[GPIOMUX_SUSPENDED] = &ssp_setting[1],
 		},
 	},
+#if !defined(CONFIG_TERT_MI2S_ENABLE)
 	{
 		.gpio = 74,
 		.settings = {
@@ -1488,6 +1516,7 @@ static struct msm_gpiomux_config ssp_configs[] __initdata = {
 			[GPIOMUX_SUSPENDED] = &ssp_setting[1],
 		},
 	},
+#endif
 	{
 		.gpio = 86,
 		.settings = {
@@ -2055,7 +2084,7 @@ static struct gpiomux_setting senn3ab_firm_setting = {
 static struct gpiomux_setting senn3ab_push_setting = {
 	.func = GPIOMUX_FUNC_GPIO,
 	.drv = GPIOMUX_DRV_2MA,
-	.pull = GPIOMUX_PULL_NONE,
+	.pull = GPIOMUX_PULL_DOWN,
 	.dir = GPIOMUX_IN,
 };
 
@@ -2150,6 +2179,51 @@ static struct msm_gpiomux_config gpio_oledid_config[] __initdata = {
 	},
 };
 
+#if defined (CONFIG_TERT_MI2S_ENABLE)
+static struct gpiomux_setting  tert_mi2s_act_cfg = {
+	.func = GPIOMUX_FUNC_1,
+	.drv = GPIOMUX_DRV_8MA,
+	.pull = GPIOMUX_PULL_NONE,
+};
+
+static struct gpiomux_setting  tert_mi2s_sus_cfg = {
+	.func = GPIOMUX_FUNC_GPIO,
+	.drv = GPIOMUX_DRV_2MA,
+	.pull = GPIOMUX_PULL_DOWN,
+};
+
+static struct msm_gpiomux_config msm8974_tert_mi2s_configs[] __initdata = {
+	{
+		.gpio	= 74,		/*  mi2s sck */
+		.settings = {
+			[GPIOMUX_SUSPENDED] = &tert_mi2s_sus_cfg,
+			[GPIOMUX_ACTIVE] = &tert_mi2s_act_cfg,
+		},
+	},
+	{
+		.gpio	= 75,
+			.settings = {
+			[GPIOMUX_SUSPENDED] = &tert_mi2s_sus_cfg,
+			[GPIOMUX_ACTIVE] = &tert_mi2s_act_cfg,
+		},
+	},
+	{
+		.gpio = 76,
+		.settings = {
+			[GPIOMUX_SUSPENDED] = &tert_mi2s_sus_cfg,
+			[GPIOMUX_ACTIVE] = &tert_mi2s_act_cfg,
+		},
+	}, 
+        {
+		.gpio = 77,    /* SD1 -Data 1 */
+		.settings = {
+			[GPIOMUX_SUSPENDED] = &tert_mi2s_sus_cfg,
+			[GPIOMUX_ACTIVE] = &tert_mi2s_act_cfg,
+		},
+	}, 
+};
+#endif
+
 void __init msm_8974_init_gpiomux(void)
 {
 	int rc;
@@ -2227,10 +2301,11 @@ void __init msm_8974_init_gpiomux(void)
 		msm_gpiomux_install(msm8974_gpioexpander_configs,
 				ARRAY_SIZE(msm8974_gpioexpander_configs));
 #endif
-
+#if !defined(CONFIG_MACH_KACTIVELTE_KOR)
 	msm_gpiomux_install(msm_hdmi_configs, ARRAY_SIZE(msm_hdmi_configs));
 #ifdef CONFIG_VIDEO_MHL_V2
 	msm_gpiomux_install(mhl_configs, ARRAY_SIZE(mhl_configs));
+#endif
 #endif
 #ifdef CONFIG_FB_MSM_MDSS_HDMI_MHL_SII8334
 	if (of_board_is_fluid())
@@ -2302,6 +2377,9 @@ void __init msm_8974_init_gpiomux(void)
 	msm_gpiomux_install(hw_rev_configs, ARRAY_SIZE(hw_rev_configs));
 	msm_gpiomux_install(gpio_nc_configs, ARRAY_SIZE(gpio_nc_configs));
 
+#ifdef CONFIG_TERT_MI2S_ENABLE
+	msm_gpiomux_install(msm8974_tert_mi2s_configs,ARRAY_SIZE(msm8974_tert_mi2s_configs));
+#endif
 	msm_gpiomux_install(msm8974_remainder_configs,
 			    ARRAY_SIZE(msm8974_remainder_configs));
 }

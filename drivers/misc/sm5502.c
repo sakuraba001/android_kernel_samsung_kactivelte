@@ -1019,6 +1019,9 @@ static void muic_update_jig_state(struct sm5502_usbsw *usbsw, int dev_type2, int
 		usbsw->attached_dev = ATTACHED_DEV_JIG_USB_ON_MUIC;
 }
 
+#if defined CONFIG_ID_BYPASS_SBL
+int otg_attached = 0;
+#endif
 
 static int sm5502_attach_dev(struct sm5502_usbsw *usbsw)
 {
@@ -1144,7 +1147,9 @@ static int sm5502_attach_dev(struct sm5502_usbsw *usbsw)
 	} else if (val1 & DEV_USB_OTG && adc == ADC_OTG) {
 		pr_info("[MUIC] OTG Connected\n");
 		usbsw->attached_dev = ATTACHED_DEV_OTG_MUIC;
-
+#if defined CONFIG_ID_BYPASS_SBL
+		otg_attached = 1;
+#endif
 #if defined(CONFIG_MUIC_SM5502_SUPPORT_LANHUB_TA)
 		sm5502_enable_rawdataInterrupts(usbsw);
 		usbsw->dock_attached = SM5502_ATTACHED;
@@ -1314,6 +1319,9 @@ static int sm5502_detach_dev(struct sm5502_usbsw *usbsw)
 	/* for SAMSUNG OTG */
 	} else if (usbsw->dev1 & DEV_USB_OTG) {
 		pr_info("[MUIC] OTG Disconnected\n");
+#if defined CONFIG_ID_BYPASS_SBL
+		otg_attached = 0;
+#endif
 #if defined(CONFIG_MUIC_SM5502_SUPPORT_LANHUB_TA)
 		sm5502_disable_rawdataInterrupts(usbsw);
 		pr_info("%s:lanhub_ta_status(%d)\n",

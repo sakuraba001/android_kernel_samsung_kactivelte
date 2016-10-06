@@ -1,4 +1,4 @@
-/* Copyright (c) 2008-2014, The Linux Foundation. All rights reserved.
+/* Copyright (c) 2008-2015, The Linux Foundation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -261,19 +261,29 @@ fail:
 	return -ENOMEM;
 }
 
-static int diagchar_close(struct inode *inode, struct file *file)
+static int diag_remove_client_entry(struct file *file)
 {
 	int i = -1;
-	struct diagchar_priv *diagpriv_data = file->private_data;
+	struct diagchar_priv *diagpriv_data = NULL;
 
 	pr_debug("diag: process exit %s\n", current->comm);
-	if (!(file->private_data)) {
-		pr_alert("diag: Invalid file pointer");
-		return -ENOMEM;
-	}
 
 	if (!driver)
 		return -ENOMEM;
+
+	mutex_lock(&driver->diag_file_mutex);
+	if (!file) {
+		pr_debug("diag: Invalid file pointer\n");
+		mutex_unlock(&driver->diag_file_mutex);
+		return -ENOENT;
+	}
+	if (!(file->private_data)) {
+		pr_alert("diag: Invalid private data");
+		mutex_unlock(&driver->diag_file_mutex);
+		return -ENOMEM;
+	}
+
+	diagpriv_data = file->private_data;
 
 	if(driver->silent_log_pid) {
 		put_pid(driver->silent_log_pid);
@@ -302,10 +312,12 @@ static int diagchar_close(struct inode *inode, struct file *file)
 #ifdef CONFIG_DIAG_OVER_USB
 	/* If the SD logging process exits, change logging to USB mode */
 	if (driver->logging_process_id == current->tgid) {
+		mutex_lock(&driver->diagchar_mutex);
 		driver->logging_mode = USB_MODE;
+		diag_ws_reset();
+		mutex_unlock(&driver->diagchar_mutex);
 		diag_update_proc_vote(DIAG_PROC_MEMORY_DEVICE, VOTE_DOWN);
 		diagfwd_connect();
-		diag_ws_reset();
 #ifdef CONFIG_DIAGFWD_BRIDGE_CODE
 		diag_clear_hsic_tbl();
 		diagfwd_cancel_hsic(REOPEN_HSIC);
@@ -332,11 +344,19 @@ static int diagchar_close(struct inode *inode, struct file *file)
 			driver->client_map[i].pid = 0;
 			kfree(diagpriv_data);
 			diagpriv_data = NULL;
+			file->private_data = 0;
 			break;
 		}
 	}
 	mutex_unlock(&driver->diagchar_mutex);
+	mutex_unlock(&driver->diag_file_mutex);
 	return 0;
+}
+
+static int diagchar_close(struct inode *inode, struct file *file)
+{
+	pr_debug("diag: process exit %s\n", current->comm);
+	return diag_remove_client_entry(file);
 }
 
 int diag_find_polling_reg(int i)
@@ -911,6 +931,7 @@ int diag_switch_logging(unsigned long ioarg)
 				pr_err("socket process, status: %d\n",
 					status);
 			}
+			driver->socket_process = NULL;
 		}
 	} else if (driver->logging_mode == SOCKET_MODE) {
 		driver->socket_process = current;
@@ -1293,9 +1314,15 @@ drop:
 					COPY_USER_SPACE_OR_EXIT(buf+ret,
 						*(data->buf_in_1),
 						data->write_ptr_1->length);
+					diag_ws_on_copy();
+					copy_data = 1;
 					data->in_busy_1 = 0;
 				}
 			}
+		}
+		if (!copy_data) {
+			diag_ws_on_copy();
+			copy_data = 1;
 		}
 #ifdef CONFIG_DIAG_SDIO_PIPE
 		/* copy 9K data over SDIO */
@@ -1347,7 +1374,9 @@ drop:
 		data_type = driver->data_ready[index] & DEINIT_TYPE;
 		COPY_USER_SPACE_OR_EXIT(buf, data_type, 4);
 		driver->data_ready[index] ^= DEINIT_TYPE;
-		goto exit;
+		mutex_unlock(&driver->diagchar_mutex);
+		diag_remove_client_entry(file);
+		return ret;
 	}
 
 	if (driver->data_ready[index] & MSG_MASKS_TYPE) {
@@ -1460,6 +1489,7 @@ drop:
 exit:
 	mutex_unlock(&driver->diagchar_mutex);
 	if (copy_data) {
+		diag_ws_on_copy_complete();
 		/*
 		 * Flush any work that is currently pending on the data
 		 * channels. This will ensure that the next read is not
@@ -1468,7 +1498,6 @@ exit:
 		for (i = 0; i < NUM_SMD_DATA_CHANNELS; i++)
 			flush_workqueue(driver->smd_data[i].wq);
 		wake_up(&driver->smd_wait_q);
-		diag_ws_on_copy_complete();
 	}
 	return ret;
 }
@@ -2181,6 +2210,7 @@ static int __init diagchar_init(void)
 		driver->in_busy_pktdata = 0;
 		driver->in_busy_dcipktdata = 0;
 		mutex_init(&driver->diagchar_mutex);
+		mutex_init(&driver->diag_file_mutex);
 		init_waitqueue_head(&driver->wait_q);
 		init_waitqueue_head(&driver->smd_wait_q);
 		INIT_WORK(&(driver->diag_drain_work), diag_drain_work_fn);

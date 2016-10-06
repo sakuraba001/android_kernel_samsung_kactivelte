@@ -55,6 +55,7 @@
 
 
 struct ISDBT_INIT_INFO_T *hInit;
+static struct wake_lock isdbt_wlock;
 
 #define RING_BUFFER_SIZE	(188 * 320 * 17)
 
@@ -563,6 +564,8 @@ int isdbt_open(struct inode *inode, struct file *filp)
 	fci_ringbuffer_init(&hOpen->RingBuffer, hOpen->buf, RING_BUFFER_SIZE);
 
 	filp->private_data = hOpen;
+	if (open_cnt == 1)
+		wake_lock(&isdbt_wlock);
 
 	return 0;
 }
@@ -661,6 +664,7 @@ int isdbt_release(struct inode *inode, struct file *filp)
 		/*kfree(hOpen->buf);*/
 
 		kfree(hOpen);
+		wake_unlock(&isdbt_wlock);
 		}
 	}
 
@@ -1053,14 +1057,13 @@ static int isdbt_probe(struct platform_device *pdev)
 #endif
 
 	INIT_LIST_HEAD(&(hInit->hHead));
+	wake_lock_init(&isdbt_wlock, WAKE_LOCK_SUSPEND, "isdbt_wlock");
 	return 0;
-
-
-
 }
 static int isdbt_remove(struct platform_device *pdev)
 {
         ISDB_PR_INFO("ISDBT remove\n");
+	wake_lock_destroy(&isdbt_wlock);
 	return 0;
 }
 

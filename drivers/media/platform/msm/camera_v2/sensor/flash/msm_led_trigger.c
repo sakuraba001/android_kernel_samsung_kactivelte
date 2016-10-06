@@ -230,16 +230,24 @@ static int32_t msm_led_trigger_config(struct msm_led_flash_ctrl_t *fctrl,
 	case MSM_CAMERA_LED_RELEASE:
 		pr_err("CAM Flash OFF & release");
 		ret = gpio_request(led_flash_en, "max77804k_flash_en");
-		if (ret)
-			pr_err("can't get max77804k_flash_en");
-		else {
+		if (ret) {
+			gpio_free(led_flash_en);
+			ret = gpio_request(led_flash_en, "max77804k_flash_en");
+			if(ret)
+				pr_err("can't get max77804k_flash_en");
+		}
+		if(!ret) {
 			gpio_direction_output(led_flash_en, 0);
 			gpio_free(led_flash_en);
 		}
 		ret = gpio_request(led_torch_en, "max77804k_torch_en");
-		if (ret)
-			pr_err("can't get max77804k_torch_en");
-		else {
+		if (ret) {
+			gpio_free(led_torch_en);
+			ret = gpio_request(led_torch_en, "max77804k_torch_en");
+			if(ret)
+				pr_err("can't get max77804k_torch_en");
+		}
+		if(!ret) {
 			gpio_direction_output(led_torch_en, 0);
 			gpio_free(led_torch_en);
 		}

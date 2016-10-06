@@ -19,8 +19,6 @@
 #include <media/msm_cam_sensor.h>
 #include "msm_sd.h"
 
-#define MAX_LED_TRIGGERS 2
-
 struct msm_led_flash_ctrl_t;
 
 struct msm_flash_fn_t {

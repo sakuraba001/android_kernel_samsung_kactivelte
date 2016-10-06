@@ -120,7 +120,8 @@ static void initialize_variable(struct ssp_data *data)
 	data->uProxCanc = 0;
 	data->uProxHiThresh = 0;
 	data->uProxLoThresh = 0;
-	data->uGyroDps = GYROSCOPE_DPS500;
+	// From M onwards, 2000 DPS is required
+	data->uGyroDps = GYROSCOPE_DPS2000;
 	data->uIr_Current = 0;
 
 	data->mcu_device = NULL;

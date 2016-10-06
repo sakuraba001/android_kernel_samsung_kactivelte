@@ -29,8 +29,20 @@ struct sec_param_data {
 #ifdef CONFIG_SEC_MONITOR_BATTERY_REMOVAL
 	unsigned int normal_poweroff;
 #endif
+#ifdef CONFIG_RESTART_REASON_SEC_PARAM
+	unsigned int param_restart_reason;
+#endif
 	unsigned int reserved0;
-} ;
+};
+
+struct sec_param_data_s {
+	struct work_struct sec_param_work;
+	struct completion work;
+	void *value;
+	unsigned int offset;
+	unsigned int size;
+	unsigned int direction;
+};
 
 enum sec_param_index {
 	param_index_debuglevel,
@@ -53,9 +65,11 @@ enum sec_param_index {
 #ifdef CONFIG_SEC_MONITOR_BATTERY_REMOVAL
 	param_index_normal_poweroff,
 #endif
+#ifdef CONFIG_RESTART_REASON_SEC_PARAM
+	param_index_restart_reason,
+#endif
 	param_index_reserved0,
-} ;
+};
 
-extern bool sec_open_param(void);
 extern bool sec_get_param(enum sec_param_index index, void *value);
 extern bool sec_set_param(enum sec_param_index index, void *value);

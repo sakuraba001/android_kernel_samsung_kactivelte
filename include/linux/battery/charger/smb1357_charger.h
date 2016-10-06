@@ -96,6 +96,9 @@
 #define USB_DUAL_STATE_BIT		BIT(0)
 
 #define CFG_10_REG			0x10
+#define WATCHDOG_TIMER			0x61
+#define WATCHDOG_TIMER_MASK		0x01
+#define WATCHDOG_TIMER_DISABLE		0x00
 
 #define CFG_11_REG			0x11
 #define PRIORITY_BIT			BIT(7)

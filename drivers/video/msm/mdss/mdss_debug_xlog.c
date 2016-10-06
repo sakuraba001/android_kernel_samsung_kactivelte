@@ -90,9 +90,11 @@ void mdss_xlog(const char *name, ...)
 	struct tlog *log;
 	ktime_t time;
 
-	if (!mdd->logd.xlog_enable)
-		return;
-
+	if (!mdd->logd.xlog_enable) {
+		mdd->logd.xlog_enable = 1;
+		mdd->logd.panic_on_err = 1;
+		mdd->logd.enable_reg_dump = 1;
+	}
 	spin_lock_irqsave(&mdss_dbg_xlog.xlock, flags);
 
 	time = ktime_get();
